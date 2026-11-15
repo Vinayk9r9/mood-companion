@@ -3,6 +3,7 @@ import { EventEmitter } from './EventEmitter.js';
 export class StateManager extends EventEmitter {
   constructor() {
     super();
+    this._saveDebounceTimer = null;
     this.state = {
       // User & Session
       user: null,
@@ -129,9 +130,33 @@ export class StateManager extends EventEmitter {
 
     this.emit('change', { path, value, oldValue });
     this.emit(`${path}.change`, { value, oldValue });
-    this.saveToStorage();
+    this._debouncedSave();
 
     return value;
+  }
+
+  // Set without emitting events or saving (for bulk loading)
+  setSilent(path, value) {
+    const keys = path.split('.');
+    const lastKey = keys.pop();
+    let target = this.state;
+
+    for (const key of keys) {
+      if (target[key] === undefined) {
+        target[key] = {};
+      }
+      target = target[key];
+    }
+
+    target[lastKey] = value;
+    return value;
+  }
+
+  _debouncedSave() {
+    if (this._saveDebounceTimer) {
+      clearTimeout(this._saveDebounceTimer);
+    }
+    this._saveDebounceTimer = setTimeout(() => this.saveToStorage(), 300);
   }
 
   // Convenience methods for common state updates
@@ -550,8 +575,10 @@ export class StateManager extends EventEmitter {
       if (data) {
         const parsed = JSON.parse(data);
         for (const [key, value] of Object.entries(parsed)) {
-          this.set(key, value);
+          this.setSilent(key, value);
         }
+        // Emit single change event after all loaded
+        this.emit('change', { path: '*', value: this.state });
       }
     } catch (e) {
       console.warn('Failed to load state:', e);

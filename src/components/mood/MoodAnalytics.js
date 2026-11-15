@@ -1,14 +1,15 @@
-const MOOD_CONFIG = {
-  happy: { label: 'Happy', emoji: '😊', color: '#facc15', colorLight: '#fef08a', colorDark: '#ca8a04' },
-  sad: { label: 'Sad', emoji: '😢', color: '#60a5fa', colorLight: '#bfdbfe', colorDark: '#2563eb' },
-  angry: { label: 'Angry', emoji: '😠', color: '#f87171', colorLight: '#fecaca', colorDark: '#dc2626' },
-  surprised: { label: 'Surprised', emoji: '😲', color: '#f472b6', colorLight: '#fbcfe8', colorDark: '#db2777' },
-  neutral: { label: 'Neutral', emoji: '😐', color: '#9ca3af', colorLight: '#e5e7eb', colorDark: '#6b7280' },
-  confused: { label: 'Confused', emoji: '😕', color: '#a78bfa', colorLight: '#e9d5ff', colorDark: '#7c3aed' },
-  tired: { label: 'Tired', emoji: '😴', color: '#94a3b8', colorLight: '#e2e8f0', colorDark: '#64748b' }
-};
+import { MOOD_CONFIG as TAILWIND_MOOD_CONFIG, MOOD_ORDER } from '../../utils/moodConfig.js';
 
-const MOOD_ORDER = ['happy', 'surprised', 'neutral', 'confused', 'tired', 'sad', 'angry'];
+// Chart-specific color config (hex colors for Canvas rendering)
+const CHART_MOOD_CONFIG = {
+  happy: { label: 'Happy', emoji: '😊', color: '#facc15' },
+  sad: { label: 'Sad', emoji: '😢', color: '#60a5fa' },
+  angry: { label: 'Angry', emoji: '😠', color: '#f87171' },
+  surprised: { label: 'Surprised', emoji: '😲', color: '#f472b6' },
+  neutral: { label: 'Neutral', emoji: '😐', color: '#9ca3af' },
+  confused: { label: 'Confused', emoji: '😕', color: '#a78bfa' },
+  tired: { label: 'Tired', emoji: '😴', color: '#94a3b8' }
+};
 
 export class MoodAnalytics {
   constructor(stateManager, themeManager, options = {}) {
@@ -140,7 +141,7 @@ export class MoodAnalytics {
   }
 
   renderSummaryCards(stats) {
-    const topConfig = MOOD_CONFIG[stats.topMood] || MOOD_CONFIG.neutral;
+    const topConfig = TAILWIND_MOOD_CONFIG[stats.topMood] || TAILWIND_MOOD_CONFIG.neutral;
 
     return [
       {
@@ -288,12 +289,12 @@ export class MoodAnalytics {
     if (total === 0) return '';
 
     return MOOD_ORDER.filter(m => distribution[m] > 0).map(mood => {
-      const config = MOOD_CONFIG[mood];
+      const config = TAILWIND_MOOD_CONFIG[mood];
       const count = distribution[mood];
       const percentage = ((count / total) * 100).toFixed(1);
       return `
         <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg glass">
-          <span class="w-3 h-3 rounded-full" style="background: ${config.color}"></span>
+          <span class="w-3 h-3 rounded-full" style="background: ${CHART_MOOD_CONFIG[mood].color}"></span>
           <span class="text-sm font-medium text-primary-900 dark:text-primary-100">${config.label}</span>
           <span class="text-xs text-muted">${percentage}%</span>
         </div>
@@ -305,7 +306,8 @@ export class MoodAnalytics {
     if (total === 0) return '<p class="text-muted text-center py-4">No data</p>';
 
     return MOOD_ORDER.filter(m => distribution[m] > 0).map(mood => {
-      const config = MOOD_CONFIG[mood];
+      const config = TAILWIND_MOOD_CONFIG[mood];
+      const chartConfig = CHART_MOOD_CONFIG[mood];
       const count = distribution[mood];
       const percentage = ((count / total) * 100).toFixed(1);
       const barWidth = (count / total) * 100;
@@ -320,7 +322,7 @@ export class MoodAnalytics {
               <span class="text-muted">${count} (${percentage}%)</span>
             </div>
             <div class="h-2 bg-lavender-200 dark:bg-primary-800 rounded-full overflow-hidden">
-              <div class="h-full rounded-full transition-all duration-500" style="width: ${barWidth}%; background: ${config.color}"></div>
+              <div class="h-full rounded-full transition-all duration-500" style="width: ${barWidth}%; background: ${chartConfig.color}"></div>
             </div>
           </div>
         </div>
@@ -332,12 +334,13 @@ export class MoodAnalytics {
     if (total === 0) return '<p class="text-muted text-center py-4">No data available</p>';
 
     return MOOD_ORDER.filter(m => distribution[m] > 0).map(mood => {
-      const config = MOOD_CONFIG[mood];
+      const config = TAILWIND_MOOD_CONFIG[mood];
+      const chartConfig = CHART_MOOD_CONFIG[mood];
       const count = distribution[mood];
       const percentage = (count / total) * 100;
       return `
         <div class="flex items-center gap-4 p-3 rounded-xl glass">
-          <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${config.color.replace('#', 'from-').replace('#', ' to-')} flex items-center justify-center text-xl flex-shrink-0">
+          <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${config.color} flex items-center justify-center text-xl flex-shrink-0">
             ${config.emoji}
           </div>
           <div class="flex-1 min-w-0">
@@ -346,7 +349,7 @@ export class MoodAnalytics {
               <span class="text-muted">${count} entries</span>
             </div>
             <div class="h-2 bg-lavender-200 dark:bg-primary-800 rounded-full overflow-hidden">
-              <div class="h-full rounded-full" style="width: ${percentage}%; background: ${config.color}"></div>
+              <div class="h-full rounded-full" style="width: ${percentage}%; background: ${chartConfig.color}"></div>
             </div>
           </div>
           <span class="font-semibold text-primary-900 dark:text-primary-100 text-sm">${percentage.toFixed(1)}%</span>
@@ -423,8 +426,8 @@ export class MoodAnalytics {
 
     const ctx = canvas.getContext('2d');
     const data = MOOD_ORDER.filter(m => distribution[m] > 0).map(m => distribution[m]);
-    const labels = MOOD_ORDER.filter(m => distribution[m] > 0).map(m => MOOD_CONFIG[m].label);
-    const colors = MOOD_ORDER.filter(m => distribution[m] > 0).map(m => MOOD_CONFIG[m].color);
+    const labels = MOOD_ORDER.filter(m => distribution[m] > 0).map(m => TAILWIND_MOOD_CONFIG[m].label);
+    const colors = MOOD_ORDER.filter(m => distribution[m] > 0).map(m => CHART_MOOD_CONFIG[m].color);
 
     // Set canvas size
     const rect = canvas.parentElement.getBoundingClientRect();
@@ -590,7 +593,7 @@ export class MoodAnalytics {
     ctx.fillText('entries', centerX, centerY + 16);
   }
 
-  drawLineChart(ctx, width, height, values, labels, moodConfig) {
+  drawLineChart(ctx, width, height, values, labels) {
     const padding = 50;
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2;
@@ -627,7 +630,7 @@ export class MoodAnalytics {
     for (let i = 0; i <= 5; i++) {
       const moodIndex = maxValue - (valueRange / 5) * i;
       const closestMood = MOOD_ORDER[Math.round(Math.max(0, Math.min(6, moodIndex)))];
-      const moodLabel = moodConfig[closestMood]?.label || '';
+      const moodLabel = CHART_MOOD_CONFIG[closestMood]?.label || '';
       const y = padding + (chartHeight / 5) * i;
       ctx.fillText(moodLabel, padding - 10, y);
     }

@@ -1,11 +1,13 @@
+import { MOOD_CONFIG } from '../../utils/moodConfig.js';
+
 const MOOD_OPTIONS = [
-  { id: 'happy', label: 'Happy', emoji: '😊', description: 'Feeling joyful and positive', color: 'from-yellow-400 to-orange-400' },
-  { id: 'sad', label: 'Sad', emoji: '😢', description: 'Feeling down or melancholic', color: 'from-blue-400 to-indigo-500' },
-  { id: 'angry', label: 'Angry', emoji: '😠', description: 'Feeling frustrated or upset', color: 'from-red-400 to-red-600' },
-  { id: 'surprised', label: 'Surprised', emoji: '😲', description: 'Something unexpected happened', color: 'from-pink-400 to-purple-500' },
-  { id: 'neutral', label: 'Neutral', emoji: '😐', description: 'Feeling calm and balanced', color: 'from-gray-400 to-gray-500' },
-  { id: 'confused', label: 'Confused', emoji: '😕', description: 'Things feel unclear or puzzling', color: 'from-purple-400 to-violet-500' },
-  { id: 'tired', label: 'Tired', emoji: '😴', description: 'Feeling drained or sleepy', color: 'from-slate-400 to-slate-500' }
+  { id: 'happy', label: 'Happy', emoji: '😊', description: 'Feeling joyful and positive', color: MOOD_CONFIG.happy.color },
+  { id: 'sad', label: 'Sad', emoji: '😢', description: 'Feeling down or melancholic', color: MOOD_CONFIG.sad.color },
+  { id: 'angry', label: 'Angry', emoji: '😠', description: 'Feeling frustrated or upset', color: MOOD_CONFIG.angry.color },
+  { id: 'surprised', label: 'Surprised', emoji: '😲', description: 'Something unexpected happened', color: MOOD_CONFIG.surprised.color },
+  { id: 'neutral', label: 'Neutral', emoji: '😐', description: 'Feeling calm and balanced', color: MOOD_CONFIG.neutral.color },
+  { id: 'confused', label: 'Confused', emoji: '😕', description: 'Things feel unclear or puzzling', color: MOOD_CONFIG.confused.color },
+  { id: 'tired', label: 'Tired', emoji: '😴', description: 'Feeling drained or sleepy', color: MOOD_CONFIG.tired.color }
 ];
 
 export class MoodSelector {

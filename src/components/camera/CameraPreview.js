@@ -7,6 +7,8 @@ export class CameraPreview {
     this.canvasContext = null;
     this.faceLandmarker = null;
     this.isRunning = false;
+    this.isStarting = false;
+    this.faceLandmarkerFailed = false;
     this.animationFrameId = null;
     this.detectionInterval = null;
     this.lastDetectionTime = 0;
@@ -88,17 +90,21 @@ async initFaceLandmarker() {
     );
 
     console.log('[CameraPreview] FaceLandmarker initialized successfully');
+    this.faceLandmarkerFailed = false;
 
   } catch (error) {
     console.error('[CameraPreview] Failed to initialize FaceLandmarker:', error);
 
     this.stateManager.addNotification({
       type: 'error',
-      title: 'Face Detection Error',
-      message: 'Unable to initialize face detection. Check the console for details.'
+      title: 'Face Detection Unavailable',
+      message: 'Camera will work without face detection. Use manual mood entry instead.',
+      duration: 0 // persistent
     });
 
-    throw error;
+    this.faceLandmarkerFailed = true;
+    this.faceLandmarker = null;
+    // Don't throw - allow camera to work without face detection
   }
 }
 
@@ -133,8 +139,9 @@ async initFaceLandmarker() {
   }
 
   async start() {
-    if (this.isRunning) return;
+    if (this.isRunning || this.isStarting) return;
 
+    this.isStarting = true;
     try {
       // Check if we're in a secure context (required for camera)
       if (!window.isSecureContext) {
@@ -144,14 +151,19 @@ async initFaceLandmarker() {
       console.log('[CameraPreview] start() called');
 
       // Initialize MediaPipe FaceLandmarker lazily
-      if (!this.faceLandmarker) {
+      if (!this.faceLandmarker && !this.faceLandmarkerFailed) {
         await this.initFaceLandmarker();
+        // initFaceLandmarker no longer throws; it sets faceLandmarkerFailed if it fails
 
-        if (!this.faceLandmarker) {
-          throw new Error('Face detection failed to initialize');
+        if (!this.faceLandmarker && this.faceLandmarkerFailed) {
+          // Face detection failed but camera can still work
+          this.stateManager.addNotification({
+            type: 'warning',
+            title: 'Face Detection Unavailable',
+            message: 'Camera is active without face detection. Use manual mood entry.',
+            duration: 0
+          });
         }
-
-        console.log('[CameraPreview] FaceLandmarker initialized successfully');
       }
 
       // Request camera permission
@@ -182,12 +194,14 @@ async initFaceLandmarker() {
       console.log('[CameraPreview] Canvas size after resize:', this.canvasElement.width, 'x', this.canvasElement.height);
 
       this.isRunning = true;
-      this.startDetectionLoop();
+      if (this.faceLandmarker) {
+        this.startDetectionLoop();
+      }
 
       this.stateManager.addNotification({
         type: 'success',
         title: 'Camera Started',
-        message: 'Face detection is now active.'
+        message: this.faceLandmarker ? 'Face detection is now active.' : 'Camera active (face detection unavailable).'
       });
     } catch (error) {
       console.error('Camera error:', error);
@@ -200,6 +214,8 @@ async initFaceLandmarker() {
           : 'Unable to access camera. Please check your device.'
       });
       throw error;
+    } finally {
+      this.isStarting = false;
     }
   }
 

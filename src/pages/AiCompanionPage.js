@@ -2,6 +2,7 @@ import { ChatInterface } from '../components/ai/ChatInterface.js';
 import { PersonalitySelector } from '../components/ai/PersonalitySelector.js';
 import { CameraToggle } from '../components/camera/CameraToggle.js';
 import { MoodContextIndicator } from '../components/mood/MoodContextIndicator.js';
+import { PERSONALITIES } from '../utils/personalities.js';
 
 export class AiCompanionPage {
   constructor(stateManager, themeManager) {
@@ -23,13 +24,6 @@ export class AiCompanionPage {
     const cameraActive = this.stateManager.get('camera.isActive');
     const conversationalMood = this.stateManager.get('mood.conversational');
     const userConfirmedMood = this.stateManager.get('mood.userConfirmed');
-
-    const PERSONALITIES = {
-      'funny-friend': { name: 'Funny Friend', emoji: '😄', color: 'from-yellow-400 to-orange-400' },
-      'motivational-coach': { name: 'Motivational Coach', emoji: '💪', color: 'from-red-400 to-red-600' },
-      'calm-listener': { name: 'Calm Listener', emoji: '🤗', color: 'from-blue-400 to-indigo-500' },
-      'productivity-assistant': { name: 'Productivity Assistant', emoji: '📋', color: 'from-green-400 to-teal-500' }
-    };
 
     const personalityConfig = PERSONALITIES[personality] || PERSONALITIES['calm-listener'];
 

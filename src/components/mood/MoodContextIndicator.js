@@ -1,12 +1,4 @@
-const MOOD_CONFIG = {
-  happy: { label: 'Happy', emoji: '😊', color: 'from-yellow-400 to-orange-400' },
-  sad: { label: 'Sad', emoji: '😢', color: 'from-blue-400 to-indigo-500' },
-  angry: { label: 'Angry', emoji: '😠', color: 'from-red-400 to-red-600' },
-  surprised: { label: 'Surprised', emoji: '😲', color: 'from-pink-400 to-purple-500' },
-  neutral: { label: 'Neutral', emoji: '😐', color: 'from-gray-400 to-gray-500' },
-  confused: { label: 'Confused', emoji: '😕', color: 'from-purple-400 to-violet-500' },
-  tired: { label: 'Tired', emoji: '😴', color: 'from-slate-400 to-slate-500' }
-};
+import { MOOD_CONFIG } from '../../utils/moodConfig.js';
 
 export class MoodContextIndicator {
   constructor(stateManager, themeManager) {

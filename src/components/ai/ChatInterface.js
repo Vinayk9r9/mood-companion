@@ -1,29 +1,4 @@
-const PERSONALITIES = {
-  'funny-friend': {
-    name: 'Funny Friend',
-    emoji: '😄',
-    color: 'from-yellow-400 to-orange-400',
-    systemPrompt: `You are a funny, playful friend who loves to make people laugh. You tell jokes, share fun facts, use playful language, and keep conversations entertaining. You're witty but kind.`
-  },
-  'motivational-coach': {
-    name: 'Motivational Coach',
-    emoji: '💪',
-    color: 'from-red-400 to-red-600',
-    systemPrompt: `You are an encouraging motivational coach. You help users set achievable goals, celebrate accomplishments, and provide constructive motivation. You're positive, energetic, and action-oriented.`
-  },
-  'calm-listener': {
-    name: 'Calm Listener',
-    emoji: '🤗',
-    color: 'from-blue-400 to-indigo-500',
-    systemPrompt: `You are a calm, empathetic listener. You listen patiently, use empathetic language, avoid unnecessary advice unless asked, and let users express themselves freely. You're warm, validating, and non-judgmental.`
-  },
-  'productivity-assistant': {
-    name: 'Productivity Assistant',
-    emoji: '📋',
-    color: 'from-green-400 to-teal-500',
-    systemPrompt: `You are an organized productivity assistant. You help organize tasks, suggest solutions, break complicated work into smaller steps, and help manage priorities. You're practical, efficient, and structured.`
-  }
-};
+import { PERSONALITIES } from '../../utils/personalities.js';
 
 const MOOD_RESPONSE_GUIDES = {
   happy: `The user is feeling happy. Celebrate with them! Share exciting ideas, suggest enjoyable activities, ask what made them happy. Match their positive energy.`,

@@ -1,33 +1,4 @@
-const PERSONALITIES = {
-  'funny-friend': {
-    name: 'Funny Friend',
-    emoji: '😄',
-    color: 'from-yellow-400 to-orange-400',
-    description: 'Playful, tells jokes, shares fun facts',
-    prompt: 'I\'ll keep things light and fun! Ask me for a joke or a random fact.'
-  },
-  'motivational-coach': {
-    name: 'Motivational Coach',
-    emoji: '💪',
-    color: 'from-red-400 to-red-600',
-    description: 'Encouraging, helps set and achieve goals',
-    prompt: 'Let\'s work towards your goals together. What do you want to achieve?'
-  },
-  'calm-listener': {
-    name: 'Calm Listener',
-    emoji: '🤗',
-    color: 'from-blue-400 to-indigo-500',
-    description: 'Empathetic, patient, lets you express freely',
-    prompt: 'I\'m here to listen without judgment. Share whatever\'s on your mind.'
-  },
-  'productivity-assistant': {
-    name: 'Productivity Assistant',
-    emoji: '📋',
-    color: 'from-green-400 to-teal-500',
-    description: 'Organized, practical, breaks down tasks',
-    prompt: 'I can help organize your tasks and boost productivity. What do you need?'
-  }
-};
+import { PERSONALITIES } from '../../utils/personalities.js';
 
 export class PersonalitySelector {
   constructor(stateManager, themeManager) {
