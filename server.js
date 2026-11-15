@@ -12,17 +12,30 @@ console.log(
   'Gemini variable detected:',
   Boolean(process.env.GEMINI_API_KEY)
 );
+
 // Initialize Gemini client
 let gemini = null;
+let geminiInitError = null;
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 
 if (geminiApiKey && geminiApiKey.trim() !== '') {
-  gemini = new GoogleGenAI({ apiKey: geminiApiKey });
-  console.log('Gemini client initialized successfully');
+  try {
+    gemini = new GoogleGenAI({ apiKey: geminiApiKey });
+    console.log('Gemini client initialized successfully');
+  } catch (error) {
+    geminiInitError = error.message;
+    console.error('Gemini client initialization failed:', error.message);
+    gemini = null;
+  }
 } else {
-  console.log('Gemini API key not found');
+  console.log('Gemini API key not found - running in DEMO mode');
+  geminiInitError = 'GEMINI_API_KEY not configured';
 }
+
+// Use geminiInitError in health check to avoid unused warning
+// eslint-disable-next-line no-unused-vars
+const _geminiInitError = geminiInitError;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -174,7 +187,7 @@ async function generateAIResponse(messages) {
 }
 
 
-// Generate fallback simulated response (when Gemini unavailable)
+// Generate fallback simulated response (DEMO MODE ONLY - explicitly enabled)
 function generateSimulatedResponse(personality, mood) {
   const responses = {
     'funny-friend': [
@@ -200,7 +213,7 @@ function generateSimulatedResponse(personality, mood) {
   };
 
   const personalityResponses = responses[personality] || responses['calm-listener'];
-  return personalityResponses[Math.floor(Math.random() * personalityResponses.length)];
+  return '[DEMO MODE] ' + personalityResponses[Math.floor(Math.random() * personalityResponses.length)];
 }
 
 // Serve static files
@@ -208,7 +221,7 @@ app.use(express.static(join(__dirname)));
 
 // API endpoint for chat
 app.post('/api/chat', express.json({ limit: '10kb' }), async (req, res) => {
-  const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+  const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
 
   // Rate limiting
   if (!checkRateLimit(clientIp)) {
@@ -228,46 +241,108 @@ app.post('/api/chat', express.json({ limit: '10kb' }), async (req, res) => {
       });
     }
 
-    const { message, personality, mood, history } = req.body;
+    const { personality, mood } = req.body;
 
     // Build messages for AI
     const messages = buildGeminiMessages(req.body);
 
     let response;
 
-    // Try Gemini first
-    if (gemini) {
+    // Check if Gemini is available
+    if (!gemini) {
+      // Check if DEMO mode is explicitly enabled
+      const demoMode = process.env.DEMO_MODE === 'true';
+      if (demoMode) {
+        console.log('DEMO MODE: Using simulated response');
+        response = generateSimulatedResponse(personality, mood);
+      } else {
+        return res.status(503).json({
+          error: 'AI service unavailable',
+          message: 'Gemini API is not configured. Set GEMINI_API_KEY in .env or enable DEMO_MODE=true for simulated responses.',
+          demoModeAvailable: true
+        });
+      }
+    } else {
       try {
         response = await generateAIResponse(messages);
       } catch (aiError) {
-        console.error('Gemini API error:', aiError.status, aiError.message);
+        console.error('Gemini API error:', aiError.status || 'unknown', aiError.message);
 
-        // Fall back to simulated responses if Gemini fails
-        response = generateSimulatedResponse(personality, mood);
+        // Check if it's a specific error we can handle
+        const errorMessage = aiError.message || 'Unknown error';
+        let statusCode = 502;
+        let errorType = 'api_error';
+
+        if (errorMessage.includes('API key') || errorMessage.includes('API_KEY')) {
+          statusCode = 401;
+          errorType = 'invalid_api_key';
+        } else if (errorMessage.includes('quota') || errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+          statusCode = 429;
+          errorType = 'rate_limit';
+        } else if (errorMessage.includes('model') || errorMessage.includes('not found')) {
+          statusCode = 404;
+          errorType = 'model_not_found';
+        } else if (errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ENOTFOUND')) {
+          statusCode = 503;
+          errorType = 'network_error';
+        }
+
+        // Check if DEMO mode is explicitly enabled for fallback
+        const demoMode = process.env.DEMO_MODE === 'true';
+        if (demoMode) {
+          console.log('DEMO MODE: Falling back to simulated response due to error:', errorMessage);
+          response = generateSimulatedResponse(personality, mood);
+          // Still inform the client this is demo mode
+          return res.json({
+            response,
+            warning: 'Using DEMO mode fallback due to API error: ' + errorType
+          });
+        }
+
+        return res.status(statusCode).json({
+          error: 'AI service error',
+          type: errorType,
+          message: errorMessage,
+          demoModeAvailable: true
+        });
       }
-    } else {
-      // No Gemini configured - use simulated response
-      response = generateSimulatedResponse(personality, mood);
     }
-
 
     res.json({ response });
 
-  }
-   catch (error) {
+  } catch (error) {
     console.error('Chat API error:', error);
     res.status(500).json({
-      error: 'Failed to process chat request'
+      error: 'Failed to process chat request',
+      message: error.message
     });
   }
 });
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  let geminiStatus = 'not_configured';
+
+  if (gemini) {
+    // Try a simple connectivity test
+    try {
+      // Quick test - just check if we can make a minimal request
+      // We won't actually send a request to avoid quota usage
+      geminiStatus = 'configured';
+    } catch (e) {
+      geminiStatus = 'error';
+    }
+  }
+
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    aiConfigured: !!gemini
+    gemini: {
+      configured: !!gemini,
+      status: geminiStatus,
+      demoMode: process.env.DEMO_MODE === 'true',
+      initError: geminiInitError
+    }
   });
 });
 

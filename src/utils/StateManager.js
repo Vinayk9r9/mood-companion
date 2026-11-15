@@ -32,6 +32,17 @@ export class StateManager extends EventEmitter {
         lastUpdate: 0
       },
 
+      // Calibration - Personalized expression learning
+      calibration: {
+        enabled: true,
+        samples: [], // Array of { features, label, timestamp, landmarkIndices }
+        status: 'inactive', // 'inactive', 'collecting', 'ready', 'active'
+        minSamplesPerLabel: 3,
+        minTotalSamples: 10,
+        version: 1,
+        lastUpdated: 0
+      },
+
       // Mood Intelligence
       mood: {
         // The "conversational mood" - what the AI believes the user is feeling
@@ -81,7 +92,8 @@ export class StateManager extends EventEmitter {
         sttEnabled: false,
         dataPersistence: 'local', // 'local', 'cloud', 'none'
         animationsEnabled: true,
-        reducedMotion: false
+        reducedMotion: false,
+        calibrationEnabled: true
       },
 
       // UI State
@@ -204,7 +216,7 @@ export class StateManager extends EventEmitter {
     this.set('expression.faceDetected', detected);
   }
 
-  updateExpression(expression, confidence, landmarks = null) {
+  updateExpression(expression, confidence, landmarks = null, blendshapes = null) {
     const now = Date.now();
     this.set('expression.current', expression);
     this.set('expression.confidence', confidence);
@@ -221,6 +233,82 @@ export class StateManager extends EventEmitter {
     // Update predicted mood
     this.set('mood.predicted', expression);
     this.set('mood.predictedConfidence', confidence);
+
+    // Also try personalized classification if calibration is ready
+    const calibrationStatus = this.get('calibration.status');
+    if (calibrationStatus === 'ready' && landmarks) {
+      const features = this.extractFeaturesForCalibration(landmarks, blendshapes);
+      const personalized = this.classifyPersonalized(features);
+      if (personalized) {
+        // Store personalized result alongside baseline
+        this.set('expression.personalized', personalized.expression);
+        this.set('expression.personalizedConfidence', personalized.confidence);
+      }
+    }
+
+    // Recalculate conversational mood when prediction changes
+    this.updateConversationalMood();
+  }
+
+  // Extract features for calibration (called from CameraPreview)
+  extractFeaturesForCalibration(landmarks, blendshapes = null) {
+    // Reuse the CameraPreview's feature extraction logic
+    const p = (idx) => landmarks[idx];
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+    const leftEAR = this.eyeAspectRatio(
+      p(159), p(145), p(133), p(173), p(157), p(158)
+    );
+    const rightEAR = this.eyeAspectRatio(
+      p(386), p(374), p(362), p(466), p(387), p(388)
+    );
+    const avgEAR = (leftEAR + rightEAR) / 2;
+
+    const mar = this.mouthAspectRatio(
+      p(13), p(14), p(78), p(308), p(82), p(87), p(312), p(317)
+    );
+
+    const mouthLeft = p(61);
+    const mouthRight = p(291);
+    const mouthTop = p(13);
+    const mouthBottom = p(14);
+    const mouthCenter = p(17);
+
+    const mouthWidth = dist(mouthLeft, mouthRight);
+    const mouthHeight = dist(mouthTop, mouthBottom);
+    const mouthCornerAvg = (dist(mouthLeft, mouthCenter) + dist(mouthRight, mouthCenter)) / 2;
+    const smileScore = (mouthCornerAvg - mouthHeight / 2) / mouthWidth;
+
+    const leftBrow = p(70);
+    const rightBrow = p(300);
+    const leftEyeTop = p(159);
+    const rightEyeTop = p(386);
+    const browHeight = ((leftBrow.y - leftEyeTop.y) + (rightBrow.y - rightEyeTop.y)) / 2;
+
+    const noseTip = p(1);
+    const leftCheek = p(234);
+    const rightCheek = p(454);
+    const faceWidth = dist(leftCheek, rightCheek);
+    const noseOffset = (noseTip.x - (leftCheek.x + rightCheek.x) / 2) / faceWidth;
+
+    // Blendshape features
+    let bsEyeOpen = 0, bsMouthOpen = 0, bsSmile = 0, bsBrowUp = 0, bsBrowDown = 0;
+    if (blendshapes && blendshapes.categories) {
+      const getBs = (name) => {
+        const cat = blendshapes.categories.find(c => c.categoryName === name);
+        return cat ? cat.score : 0;
+      };
+      bsEyeOpen = (getBs('eyeWideLeft') + getBs('eyeWideRight')) / 2;
+      bsMouthOpen = getBs('mouthOpen');
+      bsSmile = (getBs('mouthSmileLeft') + getBs('mouthSmileRight')) / 2;
+      bsBrowUp = (getBs('browInnerUp') + getBs('browOuterUpLeft') + getBs('browOuterUpRight')) / 3;
+      bsBrowDown = (getBs('browDownLeft') + getBs('browDownRight')) / 2;
+    }
+
+    return {
+      avgEAR, mar, smileScore, browHeight, noseOffset,
+      bsEyeOpen, bsMouthOpen, bsSmile, bsBrowUp, bsBrowDown
+    };
   }
 
   getSmoothedExpression() {
@@ -384,6 +472,234 @@ export class StateManager extends EventEmitter {
 
   clearMoodHistory() {
     this.set('mood.history', []);
+  }
+
+  // Calibration methods
+  addCalibrationSample(features, label) {
+    const calibration = this.get('calibration');
+    if (!calibration.enabled) return false;
+
+    // Create simplified feature vector for storage
+    const featureVector = {
+      avgEAR: features.avgEAR,
+      mar: features.mar,
+      smileScore: features.smileScore,
+      browHeight: features.browHeight,
+      noseOffset: features.noseOffset,
+      bsEyeOpen: features.bsEyeOpen || 0,
+      bsMouthOpen: features.bsMouthOpen || 0,
+      bsSmile: features.bsSmile || 0,
+      bsBrowUp: features.bsBrowUp || 0,
+      bsBrowDown: features.bsBrowDown || 0
+    };
+
+    const sample = {
+      id: crypto.randomUUID(),
+      features: featureVector,
+      label,
+      timestamp: Date.now()
+    };
+
+    const samples = [...(calibration.samples || []), sample];
+
+    // Deduplicate: keep only diverse samples (simple approach - limit per label per time window)
+    const deduped = this.deduplicateCalibrationSamples(samples);
+
+    this.set('calibration.samples', deduped);
+    this.set('calibration.lastUpdated', Date.now());
+
+    // Update status
+    this.updateCalibrationStatus();
+
+    return true;
+  }
+
+  deduplicateCalibrationSamples(samples) {
+    // Simple deduplication: keep max 2 samples per label per 30-second window
+    const byLabel = {};
+    const WINDOW_MS = 30000;
+
+    for (const sample of samples) {
+      if (!byLabel[sample.label]) byLabel[sample.label] = [];
+      byLabel[sample.label].push(sample);
+    }
+
+    const result = [];
+    for (const [label, labelSamples] of Object.entries(byLabel)) {
+      // Sort by timestamp
+      labelSamples.sort((a, b) => a.timestamp - b.timestamp);
+
+      // Keep samples that are at least WINDOW_MS apart
+      const kept = [];
+      for (const sample of labelSamples) {
+        if (kept.length === 0 || sample.timestamp - kept[kept.length - 1].timestamp >= WINDOW_MS) {
+          kept.push(sample);
+        }
+      }
+      // Limit to max 5 per label
+      result.push(...kept.slice(-5));
+    }
+
+    return result;
+  }
+
+  updateCalibrationStatus() {
+    const calibration = this.get('calibration');
+    if (!calibration.enabled) {
+      this.set('calibration.status', 'inactive');
+      return;
+    }
+
+    const samples = calibration.samples || [];
+    const labels = [...new Set(samples.map(s => s.label))];
+    const totalSamples = samples.length;
+    const minPerLabel = calibration.minSamplesPerLabel;
+    const minTotal = calibration.minTotalSamples;
+
+    // Count samples per label
+    const labelCounts = {};
+    for (const sample of samples) {
+      labelCounts[sample.label] = (labelCounts[sample.label] || 0) + 1;
+    }
+
+    const labelsWithEnoughSamples = Object.values(labelCounts).filter(c => c >= minPerLabel).length;
+    const hasMinTotal = totalSamples >= minTotal;
+    const hasMinLabels = labels.length >= 3; // Need at least 3 different expressions
+
+    let status = 'inactive';
+    if (totalSamples === 0) {
+      status = 'inactive';
+    } else if (hasMinTotal && labelsWithEnoughSamples >= 3 && hasMinLabels) {
+      status = 'ready';
+    } else {
+      status = 'collecting';
+    }
+
+    this.set('calibration.status', status);
+  }
+
+  getCalibrationStatus() {
+    return this.get('calibration.status');
+  }
+
+  getCalibrationSamples() {
+    return this.get('calibration.samples') || [];
+  }
+
+  getCalibrationSampleCounts() {
+    const samples = this.get('calibration.samples') || [];
+    const counts = {};
+    for (const sample of samples) {
+      counts[sample.label] = (counts[sample.label] || 0) + 1;
+    }
+    return counts;
+  }
+
+  clearCalibration() {
+    this.set('calibration.samples', []);
+    this.set('calibration.status', 'inactive');
+    this.set('calibration.lastUpdated', Date.now());
+  }
+
+  exportCalibration() {
+    const calibration = this.get('calibration');
+    return {
+      version: calibration.version,
+      samples: calibration.samples,
+      exportedAt: Date.now()
+    };
+  }
+
+  importCalibration(data) {
+    if (!data || !data.samples || !Array.isArray(data.samples)) {
+      throw new Error('Invalid calibration data');
+    }
+    this.set('calibration.samples', data.samples);
+    this.set('calibration.version', data.version || 1);
+    this.set('calibration.lastUpdated', Date.now());
+    this.updateCalibrationStatus();
+  }
+
+  // Personalized classification using calibration samples
+  classifyPersonalized(features) {
+    const samples = this.get('calibration.samples') || [];
+    if (samples.length < this.get('calibration.minTotalSamples')) {
+      return null; // Not enough data
+    }
+
+    // Simple k-nearest neighbors with centroid approach
+    const featureVector = this.featuresToVector(features);
+
+    // Group samples by label and compute centroids
+    const centroids = {};
+    const labelCounts = {};
+
+    for (const sample of samples) {
+      const vec = this.featuresToVector(sample.features);
+      if (!centroids[sample.label]) {
+        centroids[sample.label] = [...vec];
+        labelCounts[sample.label] = 1;
+      } else {
+        // Incremental mean
+        const n = labelCounts[sample.label];
+        for (let i = 0; i < vec.length; i++) {
+          centroids[sample.label][i] = (centroids[sample.label][i] * n + vec[i]) / (n + 1);
+        }
+        labelCounts[sample.label]++;
+      }
+    }
+
+    // Check each label has minimum samples
+    for (const label of Object.keys(centroids)) {
+      if (labelCounts[label] < this.get('calibration.minSamplesPerLabel')) {
+        return null; // Not enough samples for this label
+      }
+    }
+
+    // Find nearest centroid
+    let bestLabel = null;
+    let bestDistance = Infinity;
+
+    for (const [label, centroid] of Object.entries(centroids)) {
+      const dist = this.euclideanDistance(featureVector, centroid);
+      if (dist < bestDistance) {
+        bestDistance = dist;
+        bestLabel = label;
+      }
+    }
+
+    // Convert distance to confidence (inverse, with max distance threshold)
+    const maxDistance = Math.sqrt(featureVector.length) * 0.5; // heuristic
+    const confidence = Math.max(0, 1 - bestDistance / maxDistance);
+
+    // Only return if confident enough
+    if (confidence < 0.4) return null;
+
+    return { expression: bestLabel, confidence };
+  }
+
+  featuresToVector(features) {
+    return [
+      features.avgEAR || 0,
+      features.mar || 0,
+      features.smileScore || 0,
+      features.browHeight || 0,
+      features.noseOffset || 0,
+      features.bsEyeOpen || 0,
+      features.bsMouthOpen || 0,
+      features.bsSmile || 0,
+      features.bsBrowUp || 0,
+      features.bsBrowDown || 0
+    ];
+  }
+
+  euclideanDistance(a, b) {
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) {
+      const diff = a[i] - b[i];
+      sum += diff * diff;
+    }
+    return Math.sqrt(sum);
   }
 
   // Chat
@@ -555,7 +871,8 @@ export class StateManager extends EventEmitter {
       const persistKeys = [
         'user', 'chat.personality', 'chat.messages', 'chat.context',
         'tasks.items', 'tasks.filter', 'tasks.sortBy', 'tasks.categories',
-        'settings', 'mood.history', 'mood.userConfirmed'
+        'settings', 'mood.history', 'mood.userConfirmed',
+        'calibration'
       ];
 
       const data = {};

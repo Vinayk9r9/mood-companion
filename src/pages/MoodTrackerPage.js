@@ -2,6 +2,7 @@ import { MoodSelector } from '../components/mood/MoodSelector.js';
 import { MoodHistory } from '../components/mood/MoodHistory.js';
 import { MoodAnalytics } from '../components/mood/MoodAnalytics.js';
 import { MoodConfirmation } from '../components/mood/MoodConfirmation.js';
+import { CalibrationFeedback } from '../components/mood/CalibrationFeedback.js';
 import { MOOD_CONFIG } from '../utils/moodConfig.js';
 
 export class MoodTrackerPage {
@@ -99,6 +100,17 @@ export class MoodTrackerPage {
               aria-controls="analytics-panel"
               id="analytics-tab"
             >Analytics</button>
+            <button
+              class="tab tab-inactive"
+              data-tab="calibration"
+              role="tab"
+              aria-selected="false"
+              aria-controls="calibration-panel"
+              id="calibration-tab"
+            >
+              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+              Calibration
+            </button>
           </div>
 
           <!-- Tab Panels -->
@@ -111,6 +123,9 @@ export class MoodTrackerPage {
             </div>
             <div id="analytics-panel" role="tabpanel" aria-labelledby="analytics-tab" class="hidden">
               <div id="detailed-analytics-container"></div>
+            </div>
+            <div id="calibration-panel" role="tabpanel" aria-labelledby="calibration-tab" class="hidden">
+              <div id="calibration-feedback-container"></div>
             </div>
           </div>
         </div>
@@ -156,6 +171,13 @@ export class MoodTrackerPage {
       this.components.moodConfirmation = new MoodConfirmation(this.stateManager, this.themeManager);
       this.components.moodConfirmation.mount(confirmationContainer);
     }
+
+    // Calibration Feedback
+    const calibrationContainer = this.container.querySelector('#calibration-feedback-container');
+    if (calibrationContainer) {
+      this.components.calibrationFeedback = new CalibrationFeedback(this.stateManager, this.themeManager);
+      this.components.calibrationFeedback.mount(calibrationContainer);
+    }
   }
 
   renderMoodIndicator(container) {
@@ -164,22 +186,27 @@ export class MoodTrackerPage {
     const predictedMood = this.stateManager.get('mood.predicted');
     const predictedConfidence = this.stateManager.get('mood.predictedConfidence');
     const faceDetected = this.stateManager.get('expression.faceDetected');
+    const personalizedMood = this.stateManager.get('expression.personalized');
+    const personalizedConfidence = this.stateManager.get('expression.personalizedConfidence');
 
     const config = MOOD_CONFIG[conversationalMood] || MOOD_CONFIG.neutral;
+    const predConfig = MOOD_CONFIG[predictedMood] || MOOD_CONFIG.neutral;
+    const persConfig = personalizedMood ? (MOOD_CONFIG[personalizedMood] || MOOD_CONFIG.neutral) : null;
     const isUserConfirmed = userConfirmedMood !== null;
 
     container.innerHTML = `
       <div class="relative group">
-        <div class="rounded-2xl p-6 text-center ${config.bg} border-2 ${config.border} overflow-hidden">
+        <!-- Conversational Mood (what AI uses) - MAIN DISPLAY -->
+        <div class="rounded-2xl p-6 text-center ${config.bg} border-2 ${config.border} overflow-hidden ${isUserConfirmed ? 'ring-2 ring-green-400/50' : ''}">
           <div class="absolute inset-0 bg-gradient-to-r ${config.color} opacity-10 animate-pulse-soft"></div>
           <div class="relative z-10 space-y-3">
             <span class="text-6xl block animate-bounce-gentle">${config.emoji}</span>
             <h3 class="font-display text-2xl font-bold ${config.text}">${config.label}</h3>
             <div class="flex items-center justify-center gap-2">
-              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.border} border ${config.text}">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${isUserConfirmed ? 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200' : '${config.bg} ${config.border} border ${config.text}'}">
                 ${isUserConfirmed
                   ? '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> Confirmed by you'
-                  : '<svg class="w-3 h-3 animate-pulse-soft" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> AI detected'
+                  : '<svg class="w-3 h-3 animate-pulse-soft" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> AI Context Mood'
                 }
               </span>
             </div>
@@ -197,22 +224,50 @@ export class MoodTrackerPage {
           </button>
         </div>
 
-        <div class="mt-4 grid grid-cols-3 gap-3 text-center">
-          <div class="glass rounded-xl p-3">
-            <p class="text-xs font-medium text-muted uppercase tracking-wider">Camera</p>
-            <p class="font-medium text-primary-900 dark:text-primary-100 capitalize">${faceDetected ? predictedMood : 'No face'}</p>
-            ${faceDetected ? `<p class="text-xs text-muted">${Math.round(predictedConfidence * 100)}% confident</p>` : ''}
-          </div>
-          <div class="glass rounded-xl p-3">
-            <p class="text-xs font-medium text-muted uppercase tracking-wider">Face</p>
-            <div class="flex items-center justify-center gap-1.5 mt-1">
-              <span class="w-2 h-2 rounded-full ${faceDetected ? 'bg-green-500 animate-pulse-soft' : 'bg-gray-400'}"></span>
-              <span class="font-medium text-sm ${faceDetected ? 'text-green-600 dark:text-green-400' : 'text-muted'}">${faceDetected ? 'Detected' : 'Not Found'}</span>
+        <!-- Expression Breakdown -->
+        <div class="mt-4 space-y-3">
+          <p class="text-xs text-muted text-center uppercase tracking-wider">Expression Breakdown</p>
+
+          <div class="grid grid-cols-3 gap-3">
+            <!-- Camera Estimate -->
+            <div class="glass rounded-xl p-3 ${faceDetected ? '' : 'opacity-50'}">
+              <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">Camera (Baseline)</p>
+              <div class="flex flex-col items-center gap-1">
+                <span class="text-2xl">${faceDetected ? predConfig.emoji : '😐'}</span>
+                <p class="font-medium text-sm text-primary-900 dark:text-primary-100 capitalize">${faceDetected ? predictedMood : 'No face'}</p>
+                ${faceDetected ? `<p class="text-xs text-muted">${Math.round(predictedConfidence * 100)}% confident</p>` : '<p class="text-xs text-muted">Waiting...</p>'}
+              </div>
             </div>
-          </div>
-          <div class="glass rounded-xl p-3">
-            <p class="text-xs font-medium text-muted uppercase tracking-wider">Source</p>
-            <p class="font-medium text-sm ${isUserConfirmed ? 'text-green-600 dark:text-green-400' : 'text-primary-600 dark:text-primary-400'}">${isUserConfirmed ? 'Manual' : 'Auto'}</p>
+
+            <!-- Personalized Estimate -->
+            <div class="glass rounded-xl p-3 ${personalizedMood ? '' : 'opacity-50'}">
+              <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">Personalized</p>
+              <div class="flex flex-col items-center gap-1">
+                ${personalizedMood ? `
+                  <span class="text-2xl">${persConfig.emoji}</span>
+                  <p class="font-medium text-sm text-primary-900 dark:text-primary-100 capitalize">${personalizedMood}</p>
+                  <p class="text-xs text-primary-600 dark:text-primary-400">${Math.round(personalizedConfidence * 100)}% confident</p>
+                ` : `
+                  <span class="text-2xl">🔄</span>
+                  <p class="font-medium text-sm text-primary-900 dark:text-primary-100">Learning</p>
+                  <p class="text-xs text-muted">Need more samples</p>
+                `}
+              </div>
+            </div>
+
+            <!-- Priority Source -->
+            <div class="glass rounded-xl p-3 ${isUserConfirmed ? 'bg-green-50 dark:bg-green-900/20 border-green-200/50 dark:border-green-800/50' : ''}">
+              <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">Active Source</p>
+              <div class="flex flex-col items-center gap-1">
+                <span class="text-2xl">${config.emoji}</span>
+                <p class="font-medium text-sm ${isUserConfirmed ? 'text-green-600 dark:text-green-400' : 'text-primary-900 dark:text-primary-100'}">
+                  ${isUserConfirmed ? 'Your Choice' : 'AI Inferred'}
+                </p>
+                <p class="text-xs ${isUserConfirmed ? 'text-green-600 dark:text-green-400' : 'text-muted'}">
+                  ${isUserConfirmed ? 'Priority 1' : 'Priority 3'}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -327,6 +382,11 @@ export class MoodTrackerPage {
     this.container.querySelectorAll('[role="tabpanel"]').forEach(panel => {
       panel.classList.toggle('hidden', panel.id !== `${tab}-panel`);
     });
+
+    // Re-render calibration when tab is shown
+    if (tab === 'calibration' && this.components.calibrationFeedback) {
+      this.components.calibrationFeedback.render();
+    }
   }
 
   destroy() {
@@ -335,4 +395,5 @@ export class MoodTrackerPage {
       if (comp && comp.destroy) comp.destroy();
     });
   }
+}
 }

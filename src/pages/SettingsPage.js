@@ -108,6 +108,70 @@ export class SettingsPage {
           </div>
         </section>
 
+        <!-- Voice Chat Settings -->
+        <section class="card p-6 space-y-6" aria-labelledby="voice-heading">
+          <h2 id="voice-heading" class="font-display text-xl font-semibold text-primary-900 dark:text-primary-100 flex items-center gap-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6zm-6 0a3 3 0 01-3-3V5a3 3 0 116 0v6z"></path></svg>
+            Voice Chat
+          </h2>
+
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-primary-900 dark:text-primary-100">Voice Input (Speech-to-Text)</p>
+                <p class="text-sm text-muted">Use microphone to talk to your AI companion</p>
+              </div>
+              <button class="toggle-switch ${settings.sttEnabled ? 'active' : ''}" data-setting="sttEnabled" role="switch" aria-checked="${settings.sttEnabled}" aria-label="Voice Input"></button>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-primary-900 dark:text-primary-100">Voice Output (Text-to-Speech)</p>
+                <p class="text-sm text-muted">AI responses will be spoken aloud</p>
+              </div>
+              <button class="toggle-switch ${settings.ttsEnabled ? 'active' : ''}" data-setting="ttsEnabled" role="switch" aria-checked="${settings.ttsEnabled}" aria-label="Voice Output"></button>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-primary-900 dark:text-primary-100">Live Emotion Adaptation</p>
+                <p class="text-sm text-muted">AI adapts tone based on your facial expression</p>
+              </div>
+              <button class="toggle-switch ${settings.voiceEnabled ? 'active' : ''}" data-setting="voiceEnabled" role="switch" aria-checked="${settings.voiceEnabled}" aria-label="Live Emotion Adaptation"></button>
+            </div>
+
+            <div class="p-4 rounded-xl glass border border-lavender-200/50 dark:border-primary-800/50 bg-amber-50 dark:bg-amber-900/20">
+              <p class="text-sm text-amber-800 dark:text-amber-200">
+                <strong>Note:</strong> Voice input requires microphone permission and a supported browser (Chrome, Edge, Safari). Voice output uses the browser's built-in speech synthesis. Live emotion adaptation requires the camera to be active with expression detection enabled.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Expression Calibration -->
+        <section class="card p-6 space-y-6" aria-labelledby="calibration-heading">
+          <h2 id="calibration-heading" class="font-display text-xl font-semibold text-primary-900 dark:text-primary-100 flex items-center gap-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            Expression Calibration
+          </h2>
+
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-primary-900 dark:text-primary-100">Personalized Detection</p>
+                <p class="text-sm text-muted">Learn your unique facial expressions for better accuracy</p>
+              </div>
+              <button class="toggle-switch ${settings.calibrationEnabled !== false ? 'active' : ''}" data-setting="calibrationEnabled" role="switch" aria-checked="${settings.calibrationEnabled !== false}" aria-label="Personalized Detection"></button>
+            </div>
+
+            <div class="p-4 rounded-xl glass border border-lavender-200/50 dark:border-primary-800/50 bg-primary-50 dark:bg-primary-900/20">
+              <p class="text-sm text-primary-800 dark:text-primary-200">
+                <strong>How it works:</strong> When enabled, the system learns from your explicit feedback. You confirm or correct expression estimates, and it builds a personal model. All data stays on your device. <a href="#calibration-tab" class="text-primary-600 dark:text-primary-400 underline" data-goto="calibration">Manage calibration data &rarr;</a>
+              </p>
+            </div>
+          </div>
+        </section>
+
         <!-- Mood Confirmation -->
         <section class="card p-6 space-y-6" aria-labelledby="mood-heading">
           <h2 id="mood-heading" class="font-display text-xl font-semibold text-primary-900 dark:text-primary-100 flex items-center gap-2">

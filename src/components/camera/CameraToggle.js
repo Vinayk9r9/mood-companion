@@ -19,7 +19,23 @@ export class CameraToggle {
     const faceDetected = this.stateManager.get('expression.faceDetected');
     const expression = this.stateManager.get('expression.current');
     const confidence = this.stateManager.get('expression.confidence');
+    const personalizedMood = this.stateManager.get('expression.personalized');
+    const personalizedConfidence = this.stateManager.get('expression.personalizedConfidence');
     const settings = this.stateManager.get('settings');
+
+    // Mood config for emojis
+    const MOOD_CONFIG = {
+      happy: { emoji: '😊', color: 'from-yellow-400 to-orange-400' },
+      sad: { emoji: '😢', color: 'from-blue-400 to-indigo-500' },
+      angry: { emoji: '😠', color: 'from-red-400 to-red-600' },
+      surprised: { emoji: '😲', color: 'from-pink-400 to-purple-500' },
+      neutral: { emoji: '😐', color: 'from-gray-400 to-gray-500' },
+      confused: { emoji: '😕', color: 'from-purple-400 to-violet-500' },
+      tired: { emoji: '😴', color: 'from-slate-400 to-slate-500' }
+    };
+
+    const baselineConfig = MOOD_CONFIG[expression] || MOOD_CONFIG.neutral;
+    const personalizedConfig = personalizedMood ? (MOOD_CONFIG[personalizedMood] || MOOD_CONFIG.neutral) : null;
 
     this.container.innerHTML = `
       <div class="relative" id="camera-toggle-container">
@@ -42,7 +58,7 @@ export class CameraToggle {
 
         <!-- Dropdown menu when camera is active -->
         ${cameraActive ? `
-          <div id="camera-dropdown" class="absolute right-0 top-full mt-2 w-56 glass rounded-xl border border-lavender-200/50 dark:border-primary-800/50 shadow-lg opacity-0 invisible transform translate-y-2 transition-all duration-200 z-50">
+          <div id="camera-dropdown" class="absolute right-0 top-full mt-2 w-64 glass rounded-xl border border-lavender-200/50 dark:border-primary-800/50 shadow-lg opacity-0 invisible transform translate-y-2 transition-all duration-200 z-50">
             <div class="p-3">
               <div class="flex items-center justify-between mb-3">
                 <span class="font-medium text-sm text-primary-900 dark:text-primary-100">Camera Controls</span>
@@ -74,14 +90,44 @@ export class CameraToggle {
                       ${faceDetected ? 'Detected' : 'Not Found'}
                     </span>
                   </div>
-                  <div class="flex justify-between">
-                    <span class="text-muted">Expression</span>
-                    <span class="font-medium text-primary-900 dark:text-primary-100 capitalize">${expression}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-muted">Confidence</span>
-                    <span class="font-medium text-primary-900 dark:text-primary-100">${Math.round(confidence * 100)}%</span>
-                  </div>
+
+                  ${faceDetected ? `
+                    <!-- Baseline Expression -->
+                    <div class="flex items-center gap-2 p-2 rounded-lg glass">
+                      <div class="w-7 h-7 rounded-lg bg-gradient-to-br ${baselineConfig.color} flex items-center justify-center text-sm flex-shrink-0">
+                        ${baselineConfig.emoji}
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-xs text-muted">Baseline</p>
+                        <p class="font-medium text-primary-900 dark:text-primary-100 truncate capitalize">${expression}</p>
+                      </div>
+                      <span class="text-xs font-mono text-primary-600 dark:text-primary-400">${Math.round(confidence * 100)}%</span>
+                    </div>
+
+                    ${personalizedMood ? `
+                      <!-- Personalized Expression -->
+                      <div class="flex items-center gap-2 p-2 rounded-lg bg-primary-500/10 border border-primary-200/50 dark:border-primary-800/50">
+                        <div class="w-7 h-7 rounded-lg bg-gradient-to-br ${personalizedConfig.color} flex items-center justify-center text-sm flex-shrink-0">
+                          ${personalizedConfig.emoji}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-xs text-primary-600 dark:text-primary-400">Personalized</p>
+                          <p class="font-medium text-primary-900 dark:text-primary-100 truncate capitalize">${personalizedMood}</p>
+                        </div>
+                        <span class="text-xs font-mono text-primary-600 dark:text-primary-400">${Math.round(personalizedConfidence * 100)}%</span>
+                      </div>
+                    ` : `
+                      <!-- Learning State -->
+                      <div class="flex items-center gap-2 p-2 rounded-lg glass opacity-50">
+                        <div class="w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm flex-shrink-0">🔄</div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-xs text-muted">Personalized</p>
+                          <p class="font-medium text-xs text-muted">Learning...</p>
+                        </div>
+                        <span class="text-xs text-muted">--</span>
+                      </div>
+                    `}
+                  ` : ''}
                 </div>
               </div>
             </div>

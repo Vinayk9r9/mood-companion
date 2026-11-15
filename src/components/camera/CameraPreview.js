@@ -84,12 +84,12 @@ async initFaceLandmarker() {
         minFaceDetectionConfidence: 0.5,
         minFacePresenceConfidence: 0.5,
         minTrackingConfidence: 0.5,
-        outputFaceBlendshapes: false,
+        outputFaceBlendshapes: true,  // Enable blendshapes for richer expression data
         outputFacialTransformationMatrixes: false
       }
     );
 
-    console.log('[CameraPreview] FaceLandmarker initialized successfully');
+    console.log('[CameraPreview] FaceLandmarker initialized successfully with blendshapes');
     this.faceLandmarkerFailed = false;
 
   } catch (error) {
@@ -323,7 +323,7 @@ async initFaceLandmarker() {
     const now = Date.now();
     this.lastDetectionTime = now;
 
-    console.log('[CameraPreview] FaceLandmarker results:', results.faceLandmarks ? results.faceLandmarks.length : 'no landmarks');
+    // console.log('[CameraPreview] FaceLandmarker results:', results.faceLandmarks ? results.faceLandmarks.length : 'no landmarks');
 
     // Draw face mesh on canvas
     this.drawFaceMesh(results);
@@ -334,9 +334,10 @@ async initFaceLandmarker() {
 
     if (faceDetected && results.faceLandmarks[0]) {
       const landmarks = results.faceLandmarks[0];
+      const blendshapes = results.faceBlendshapes && results.faceBlendshapes[0] ? results.faceBlendshapes[0] : null;
 
-      // Classify expression
-      const { expression, confidence } = this.classifyExpression(landmarks);
+      // Classify expression with both landmarks and blendshapes
+      const { expression, confidence } = this.classifyExpression(landmarks, blendshapes);
 
       // Update state
       this.stateManager.updateExpression(expression, confidence, landmarks);
@@ -499,9 +500,9 @@ async initFaceLandmarker() {
     ctx.stroke();
   }
 
-  classifyExpression(landmarks) {
+  classifyExpression(landmarks, blendshapes = null) {
     // Calculate geometric features from landmarks
-    const features = this.extractFeatures(landmarks);
+    const features = this.extractFeatures(landmarks, blendshapes);
 
     // Rule-based classification with confidence scoring
     const scores = this.calculateExpressionScores(features);
@@ -525,7 +526,14 @@ async initFaceLandmarker() {
     return { expression: bestExpression, confidence: Math.min(bestScore, 1.0) };
   }
 
-  extractFeatures(landmarks) {
+  // Get blendshape value by name
+  getBlendshape(blendshapes, name) {
+    if (!blendshapes || !blendshapes.categories) return 0;
+    const category = blendshapes.categories.find(c => c.categoryName === name);
+    return category ? category.score : 0;
+  }
+
+  extractFeatures(landmarks, blendshapes = null) {
     // Helper to get point
     const p = (idx) => landmarks[idx];
     const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -572,6 +580,21 @@ async initFaceLandmarker() {
     const faceWidth = dist(leftCheek, rightCheek);
     const noseOffset = (noseTip.x - (leftCheek.x + rightCheek.x) / 2) / faceWidth;
 
+    // Blendshape features (when available)
+    let bsEyeOpen = 0;
+    let bsMouthOpen = 0;
+    let bsSmile = 0;
+    let bsBrowUp = 0;
+    let bsBrowDown = 0;
+
+    if (blendshapes) {
+      bsEyeOpen = (this.getBlendshape(blendshapes, 'eyeWideLeft') + this.getBlendshape(blendshapes, 'eyeWideRight')) / 2;
+      bsMouthOpen = this.getBlendshape(blendshapes, 'mouthOpen');
+      bsSmile = (this.getBlendshape(blendshapes, 'mouthSmileLeft') + this.getBlendshape(blendshapes, 'mouthSmileRight')) / 2;
+      bsBrowUp = (this.getBlendshape(blendshapes, 'browInnerUp') + this.getBlendshape(blendshapes, 'browOuterUpLeft') + this.getBlendshape(blendshapes, 'browOuterUpRight')) / 3;
+      bsBrowDown = (this.getBlendshape(blendshapes, 'browDownLeft') + this.getBlendshape(blendshapes, 'browDownRight')) / 2;
+    }
+
     return {
       avgEAR,
       mar,
@@ -579,7 +602,13 @@ async initFaceLandmarker() {
       browHeight,
       noseOffset,
       mouthWidth,
-      mouthHeight
+      mouthHeight,
+      // Blendshape features
+      bsEyeOpen,
+      bsMouthOpen,
+      bsSmile,
+      bsBrowUp,
+      bsBrowDown
     };
   }
 
@@ -603,7 +632,8 @@ async initFaceLandmarker() {
   }
 
   calculateExpressionScores(features) {
-    const { avgEAR, mar, smileScore, browHeight, noseOffset } = features;
+    const { avgEAR, mar, smileScore, browHeight, noseOffset,
+      bsEyeOpen, bsMouthOpen, bsSmile, bsBrowUp, bsBrowDown } = features;
 
     // Normalize features (approximate ranges based on testing)
     const normEAR = Math.max(0, Math.min(1, (avgEAR - 0.15) / 0.15)); // 0.15-0.3 typical
@@ -611,57 +641,68 @@ async initFaceLandmarker() {
     const normSmile = Math.max(-1, Math.min(1, smileScore * 10)); // -0.1 to 0.1 typical
     const normBrow = Math.max(-1, Math.min(1, browHeight * 50)); // -0.02 to 0.02 typical
 
+    // Blendshape features are already 0-1 normalized
+    const hasBlendshapes = bsEyeOpen > 0 || bsMouthOpen > 0 || bsSmile > 0 || bsBrowUp > 0 || bsBrowDown > 0;
+
+    // Combined features - blendshapes are more reliable when available
+    const combinedSmile = hasBlendshapes ? (normSmile * 0.3 + bsSmile * 0.7) : normSmile;
+    const combinedEAR = hasBlendshapes ? (normEAR * 0.3 + bsEyeOpen * 0.7) : normEAR;
+    const combinedMAR = hasBlendshapes ? (normMAR * 0.3 + bsMouthOpen * 0.7) : normMAR;
+    const combinedBrowUp = hasBlendshapes ? Math.max(normBrow, 0) * 0.3 + bsBrowUp * 0.7 : Math.max(normBrow, 0);
+    const combinedBrowDown = hasBlendshapes ? Math.max(-normBrow, 0) * 0.3 + bsBrowDown * 0.7 : Math.max(-normBrow, 0);
+
     const scores = {};
 
     // Happy: High smile, normal EAR, moderate MAR
     scores.happy = Math.max(0,
-      (normSmile > 0 ? normSmile * 0.8 : 0) +
-      (normEAR > 0.3 && normEAR < 0.7 ? 0.3 : 0) +
-      (normMAR > 0.2 && normMAR < 0.6 ? 0.2 : 0)
+      (combinedSmile > 0 ? combinedSmile * 1.0 : 0) +
+      (combinedEAR > 0.25 && combinedEAR < 0.7 ? 0.3 : 0) +
+      (combinedMAR > 0.15 && combinedMAR < 0.65 ? 0.2 : 0) +
+      (combinedBrowUp < 0.5 ? 0.15 : 0) // not too surprised
     );
 
     // Sad: Low smile (frown), droopy eyes, low brows
     scores.sad = Math.max(0,
-      (normSmile < -0.1 ? Math.abs(normSmile) * 0.6 : 0) +
-      (normEAR < 0.3 ? (0.3 - normEAR) * 1.5 : 0) +
-      (normBrow < -0.1 ? Math.abs(normBrow) * 0.5 : 0)
+      (combinedSmile < -0.08 ? Math.abs(combinedSmile) * 0.8 : 0) +
+      (combinedEAR < 0.35 ? (0.35 - combinedEAR) * 2.0 : 0) +
+      (combinedBrowDown > 0.1 ? combinedBrowDown * 0.8 : 0)
     );
 
     // Angry: Low brows, tight eyes, slight frown
     scores.angry = Math.max(0,
-      (normBrow < -0.2 ? Math.abs(normBrow) * 1.2 : 0) +
-      (normEAR < 0.25 ? (0.25 - normEAR) * 2 : 0) +
-      (normSmile < 0 ? Math.abs(normSmile) * 0.3 : 0)
+      (combinedBrowDown > 0.15 ? combinedBrowDown * 1.5 : 0) +
+      (combinedEAR < 0.3 ? (0.3 - combinedEAR) * 2.5 : 0) +
+      (combinedSmile < -0.05 ? Math.abs(combinedSmile) * 0.5 : 0)
     );
 
-    // Surprised: High brows, wide eyes, open mouth
+    // Surprised: High brows, wide eyes, open mouth - RAISED THRESHOLDS to reduce false positives
     scores.surprised = Math.max(0,
-      (normBrow > 0.3 ? (normBrow - 0.3) * 2 : 0) +
-      (normEAR > 0.4 ? (normEAR - 0.4) * 2 : 0) +
-      (normMAR > 0.5 ? (normMAR - 0.5) * 1.5 : 0)
+      (combinedBrowUp > 0.5 ? (combinedBrowUp - 0.5) * 3.0 : 0) +   // Need clearly raised brows
+      (combinedEAR > 0.55 ? (combinedEAR - 0.55) * 3.0 : 0) +       // Need very wide eyes
+      (combinedMAR > 0.65 ? (combinedMAR - 0.65) * 2.5 : 0)         // Need very open mouth
     );
 
     // Confused: Asymmetric brows, slight frown, tilted head
     scores.confused = Math.max(0,
-      (Math.abs(noseOffset) > 0.1 ? Math.abs(noseOffset) * 2 : 0) +
-      (normSmile < -0.05 ? Math.abs(normSmile) * 0.5 : 0) +
-      (normBrow < 0 && normBrow > -0.3 ? 0.2 : 0)
+      (Math.abs(noseOffset) > 0.12 ? Math.abs(noseOffset) * 2.5 : 0) +
+      (combinedSmile < -0.05 ? Math.abs(combinedSmile) * 0.5 : 0) +
+      (combinedBrowUp < 0.3 && combinedBrowDown < 0.3 && Math.abs(normBrow) < 0.2 ? 0.3 : 0) // neutral brow
     );
 
     // Tired: Low EAR (droopy eyes), low MAR, neutral mouth
     scores.tired = Math.max(0,
-      (normEAR < 0.2 ? (0.2 - normEAR) * 3 : 0) +
-      (normMAR < 0.2 ? (0.2 - normMAR) * 1 : 0) +
-      (Math.abs(normSmile) < 0.1 ? 0.2 : 0)
+      (combinedEAR < 0.25 ? (0.25 - combinedEAR) * 4.0 : 0) +
+      (combinedMAR < 0.25 ? (0.25 - combinedMAR) * 1.5 : 0) +
+      (Math.abs(combinedSmile) < 0.1 ? 0.3 : 0)
     );
 
-    // Neutral: Everything in middle ranges
+    // Neutral: Everything in middle ranges - INCREASED weight to be default fallback
     scores.neutral = Math.max(0,
-      (normEAR > 0.2 && normEAR < 0.4 ? 0.4 : 0) +
-      (normMAR > 0.2 && normMAR < 0.5 ? 0.3 : 0) +
-      (Math.abs(normSmile) < 0.1 ? 0.3 : 0) +
-      (Math.abs(normBrow) < 0.15 ? 0.3 : 0) +
-      (Math.abs(noseOffset) < 0.08 ? 0.2 : 0)
+      (combinedEAR > 0.18 && combinedEAR < 0.45 ? 0.6 : 0) +
+      (combinedMAR > 0.18 && combinedMAR < 0.55 ? 0.5 : 0) +
+      (Math.abs(combinedSmile) < 0.12 ? 0.5 : 0) +
+      (Math.abs(combinedBrowUp - combinedBrowDown) < 0.2 ? 0.5 : 0) +
+      (Math.abs(noseOffset) < 0.1 ? 0.4 : 0)
     );
 
     // Normalize scores
