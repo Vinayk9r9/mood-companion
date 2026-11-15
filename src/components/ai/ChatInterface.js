@@ -368,30 +368,28 @@ export class ChatInterface {
   }
 
   toggleListening() {
-    if (!this.recognition) {
-      this.stateManager.addNotification({
-        type: 'error',
-        title: 'Not Supported',
-        message: 'Speech recognition is not available in this browser'
-      });
-      return;
-    }
+  if (!this.recognition) {
+    console.error('Speech recognition is not initialized.');
+    return;
+  }
 
-    if (this.isListening) {
-      this.recognition.stop();
+  if (this.isListening) {
+    this.recognition.stop();
+    return;
+  }
+
+  try {
+    this.recognition.start();
+    this.isListening = true;
+  } catch (error) {
+    if (error.name === 'InvalidStateError') {
+      console.warn('Speech recognition is already running.');
+      this.isListening = true;
     } else {
-      try {
-        this.recognition.start();
-      } catch (e) {
-        console.error('Failed to start recognition:', e);
-        this.stateManager.addNotification({
-          type: 'error',
-          title: 'Failed to Start',
-          message: 'Could not start voice recognition. Please try again.'
-        });
-      }
+      console.error('Failed to start recognition:', error);
     }
   }
+}
 
   // Voice Output (TTS) methods
   initSpeechSynthesis() {

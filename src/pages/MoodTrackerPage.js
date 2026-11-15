@@ -396,4 +396,3 @@ export class MoodTrackerPage {
     });
   }
 }
-}
