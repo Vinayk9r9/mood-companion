@@ -24,6 +24,7 @@ export class ChatInterface {
     // Voice input
     this.recognition = null;
     this.isListening = false;
+    this.isRecognitionStarting = false;
     this.interimTranscript = '';
 
     // Voice output
@@ -256,13 +257,14 @@ export class ChatInterface {
     this.recognition = new SpeechRecognition();
     this.recognition.continuous = false;
     this.recognition.interimResults = true;
-    this.recognition.lang = 'en-US';
+    this.recognition.lang = 'en-IN';
     this.recognition.maxAlternatives = 1;
 
     this.recognition.onstart = () => {
-      this.isListening = true;
-      this.interimTranscript = '';
-      this.render(); // Re-render to show listening state
+    this.isRecognitionStarting = false;
+    this.isListening = true;
+    this.interimTranscript = '';
+    this.render();
     };
 
     this.recognition.onresult = (event) => {
@@ -304,14 +306,15 @@ export class ChatInterface {
 
     this.recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
+      this.isRecognitionStarting = false;
       this.isListening = false;
       this.interimTranscript = '';
 
       let errorMessage = 'Voice input error';
       switch (event.error) {
         case 'no-speech':
-          errorMessage = 'No speech detected. Please try again.';
-          break;
+        errorMessage = 'I could not hear any speech. Please check your microphone and try again.';
+        break;
         case 'audio-capture':
           errorMessage = 'Microphone not accessible.';
           break;
@@ -340,32 +343,49 @@ export class ChatInterface {
     };
 
     this.recognition.onend = () => {
+      this.isRecognitionStarting = false;
       this.isListening = false;
       this.interimTranscript = '';
       this.render();
     };
   }
 
-  handleVoiceInput(finalTranscript) {
-    // Add the final transcript to the input
-    const input = this.container?.querySelector('#message-input');
-    if (input) {
-      input.value = finalTranscript;
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-    }
+  
+async handleVoiceInput(finalTranscript) {
+  const message = finalTranscript.trim();
 
-    // Don't auto-submit - let user review and press send
-    const sendBtn = this.container?.querySelector('#send-btn');
-    if (sendBtn) sendBtn.disabled = false;
+  if (!message) return;
 
-    this.stateManager.addNotification({
-      type: 'success',
-      title: 'Voice input ready',
-      message: 'Review and press send, or click mic again to re-record',
-      duration: 3000
-    });
+  // Prevent duplicate submissions
+  if (this.isSendingVoiceMessage) return;
+
+  this.isSendingVoiceMessage = true;
+
+  const input = this.container?.querySelector('#message-input');
+
+  if (input) {
+    input.value = '';
+    input.style.height = 'auto';
   }
+
+  const interimEl = this.container?.querySelector('#interim-transcript');
+  if (interimEl) {
+    interimEl.textContent = '';
+    interimEl.style.display = 'none';
+  }
+
+  const sendBtn = this.container?.querySelector('#send-btn');
+  if (sendBtn) sendBtn.disabled = true;
+
+  try {
+    await this.sendMessage(message);
+  } catch (error) {
+    console.error('Voice message submission failed:', error);
+  } finally {
+    this.isSendingVoiceMessage = false;
+  }
+}
+
 
   toggleListening() {
   if (!this.recognition) {
@@ -373,18 +393,30 @@ export class ChatInterface {
     return;
   }
 
+  // Stop an active recognition session
   if (this.isListening) {
-    this.recognition.stop();
+    try {
+      this.recognition.stop();
+    } catch (error) {
+      console.warn('Could not stop recognition:', error);
+    }
     return;
   }
 
+  // Prevent multiple start() calls before Chrome fires onstart
+  if (this.isRecognitionStarting) {
+    return;
+  }
+
+  this.isRecognitionStarting = true;
+
   try {
     this.recognition.start();
-    this.isListening = true;
   } catch (error) {
+    this.isRecognitionStarting = false;
+
     if (error.name === 'InvalidStateError') {
-      console.warn('Speech recognition is already running.');
-      this.isListening = true;
+      console.warn('Recognition is already active or stopping.');
     } else {
       console.error('Failed to start recognition:', error);
     }
