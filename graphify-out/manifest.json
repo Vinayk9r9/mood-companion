@@ -1,0 +1,236 @@
+{
+  "package.json": {
+    "mtime": 1794765156.5906503,
+    "seen": 1794807422.3701313,
+    "ast_hash": "5815b4c416bcd1110ba7d3e9b67387c8",
+    "semantic_hash": "5815b4c416bcd1110ba7d3e9b67387c8"
+  },
+  "run.py": {
+    "mtime": 1794638352.1607392,
+    "seen": 1794807422.370137,
+    "ast_hash": "a43ff271bf4fd8dae51ca34d07a6bfa1",
+    "semantic_hash": "a43ff271bf4fd8dae51ca34d07a6bfa1"
+  },
+  "server.js": {
+    "mtime": 1794776669.4501426,
+    "seen": 1794807422.3701396,
+    "ast_hash": "6ceba501e314c4e19ae02a95dc2faaab",
+    "semantic_hash": "6ceba501e314c4e19ae02a95dc2faaab"
+  },
+  "src/App.js": {
+    "mtime": 1794649017.1610057,
+    "seen": 1794807422.3701408,
+    "ast_hash": "e8210c7c6a96dd3d41ee9b326c7f20a7",
+    "semantic_hash": "e8210c7c6a96dd3d41ee9b326c7f20a7"
+  },
+  "src/components/ai/ChatInterface.js": {
+    "mtime": 1794776669.4516475,
+    "seen": 1794807422.370142,
+    "ast_hash": "0ed74ee27307bc9574f0b40ae23477b1",
+    "semantic_hash": "0ed74ee27307bc9574f0b40ae23477b1"
+  },
+  "src/components/ai/ChatPreview.js": {
+    "mtime": 1794725569.860567,
+    "seen": 1794807422.370143,
+    "ast_hash": "10b7616c60b7f91708146dc067847524",
+    "semantic_hash": "10b7616c60b7f91708146dc067847524"
+  },
+  "src/components/ai/PersonalitySelector.js": {
+    "mtime": 1794765160.8187177,
+    "seen": 1794807422.370144,
+    "ast_hash": "96e93bd5ddcd304fce5da36ae5f9e852",
+    "semantic_hash": "96e93bd5ddcd304fce5da36ae5f9e852"
+  },
+  "src/components/ai/VoiceChat.js": {
+    "mtime": 1794776669.4516475,
+    "seen": 1794807422.370145,
+    "ast_hash": "89d23ba1579ede5417b18039e64b1e82",
+    "semantic_hash": "89d23ba1579ede5417b18039e64b1e82"
+  },
+  "src/components/camera/CameraPreview.js": {
+    "mtime": 1794776669.4516475,
+    "seen": 1794807422.3701458,
+    "ast_hash": "1b815d57cf06a8394589f3da98c109a4",
+    "semantic_hash": "1b815d57cf06a8394589f3da98c109a4"
+  },
+  "src/components/camera/CameraToggle.js": {
+    "mtime": 1794776669.4526541,
+    "seen": 1794807422.3701468,
+    "ast_hash": "1d8f4050708c00d6c51d38dd52feea0a",
+    "semantic_hash": "1d8f4050708c00d6c51d38dd52feea0a"
+  },
+  "src/components/dashboard/QuickActions.js": {
+    "mtime": 1794637546.8393362,
+    "seen": 1794807422.3701475,
+    "ast_hash": "b30f06d3ac0bcfa05f7324b29358de78",
+    "semantic_hash": "b30f06d3ac0bcfa05f7324b29358de78"
+  },
+  "src/components/dashboard/SuggestedActivities.js": {
+    "mtime": 1794637692.888088,
+    "seen": 1794807422.370149,
+    "ast_hash": "dab7f8372d6cefab67b5e1f01700bc8f",
+    "semantic_hash": "dab7f8372d6cefab67b5e1f01700bc8f"
+  },
+  "src/components/dashboard/TodaysTasks.js": {
+    "mtime": 1794637588.4963562,
+    "seen": 1794807422.3701496,
+    "ast_hash": "6629a34e24f1ff0c60545d0d149a00c9",
+    "semantic_hash": "6629a34e24f1ff0c60545d0d149a00c9"
+  },
+  "src/components/layout/Header.js": {
+    "mtime": 1794637134.6478188,
+    "seen": 1794807422.3701503,
+    "ast_hash": "445b72a0f735af01921da45692b79954",
+    "semantic_hash": "445b72a0f735af01921da45692b79954"
+  },
+  "src/components/layout/MobileMenu.js": {
+    "mtime": 1794637218.7666085,
+    "seen": 1794807422.3701518,
+    "ast_hash": "21e8973c896d2f5522412c73a32a3d8d",
+    "semantic_hash": "21e8973c896d2f5522412c73a32a3d8d"
+  },
+  "src/components/layout/Navigation.js": {
+    "mtime": 1794637168.930406,
+    "seen": 1794807422.3701525,
+    "ast_hash": "3857d4aa61e7e3106d5f080a477714c4",
+    "semantic_hash": "3857d4aa61e7e3106d5f080a477714c4"
+  },
+  "src/components/layout/Sidebar.js": {
+    "mtime": 1794649029.0288384,
+    "seen": 1794807422.3701534,
+    "ast_hash": "8cf11a789ae9a5e035baf7c5d148404d",
+    "semantic_hash": "8cf11a789ae9a5e035baf7c5d148404d"
+  },
+  "src/components/mood/CalibrationFeedback.js": {
+    "mtime": 1794776669.4526541,
+    "seen": 1794807422.3701541,
+    "ast_hash": "8efe91d60f830a3e02dcba3c1499a5fa",
+    "semantic_hash": "8efe91d60f830a3e02dcba3c1499a5fa"
+  },
+  "src/components/mood/MoodAnalytics.js": {
+    "mtime": 1794765164.7047644,
+    "seen": 1794807422.370155,
+    "ast_hash": "a4f8f52f86ac29959dd283e142d68927",
+    "semantic_hash": "a4f8f52f86ac29959dd283e142d68927"
+  },
+  "src/components/mood/MoodConfirmation.js": {
+    "mtime": 1794765165.3006177,
+    "seen": 1794807422.370156,
+    "ast_hash": "b9227d4705fde2dd117946ec5162ae68",
+    "semantic_hash": "b9227d4705fde2dd117946ec5162ae68"
+  },
+  "src/components/mood/MoodContextIndicator.js": {
+    "mtime": 1794776669.4536567,
+    "seen": 1794807422.3701568,
+    "ast_hash": "4e557519ae5d26880c368885205e1aa4",
+    "semantic_hash": "4e557519ae5d26880c368885205e1aa4"
+  },
+  "src/components/mood/MoodHistory.js": {
+    "mtime": 1794765166.7101035,
+    "seen": 1794807422.3701577,
+    "ast_hash": "66c578a89ecdc11d9169bec981dc66ba",
+    "semantic_hash": "66c578a89ecdc11d9169bec981dc66ba"
+  },
+  "src/components/mood/MoodIndicator.js": {
+    "mtime": 1794765167.4311073,
+    "seen": 1794807422.370159,
+    "ast_hash": "426e4c4370d4fd2ba1cdd8d71a5be4f1",
+    "semantic_hash": "426e4c4370d4fd2ba1cdd8d71a5be4f1"
+  },
+  "src/components/mood/MoodSelector.js": {
+    "mtime": 1794765168.2387197,
+    "seen": 1794807422.3701599,
+    "ast_hash": "0696da29754f2a1d95c43070c01c0849",
+    "semantic_hash": "0696da29754f2a1d95c43070c01c0849"
+  },
+  "src/components/tasks/TaskList.js": {
+    "mtime": 1794638162.2902932,
+    "seen": 1794807422.3701606,
+    "ast_hash": "13add4ab7277649ddcb85fd360fefef7",
+    "semantic_hash": "13add4ab7277649ddcb85fd360fefef7"
+  },
+  "src/components/tasks/TaskSuggestions.js": {
+    "mtime": 1794638211.0107875,
+    "seen": 1794807422.3701613,
+    "ast_hash": "0671ea89afd2d2998d58d891644a74c0",
+    "semantic_hash": "0671ea89afd2d2998d58d891644a74c0"
+  },
+  "src/components/ui/NotificationContainer.js": {
+    "mtime": 1794637243.9219685,
+    "seen": 1794807422.3701625,
+    "ast_hash": "d8a04250e2a5874ed080451d8c8c5120",
+    "semantic_hash": "d8a04250e2a5874ed080451d8c8c5120"
+  },
+  "src/main.js": {
+    "mtime": 1794759477.727025,
+    "seen": 1794807422.3701632,
+    "ast_hash": "2a7da94705003b2c88f0ebcf910ed4a4",
+    "semantic_hash": "2a7da94705003b2c88f0ebcf910ed4a4"
+  },
+  "src/pages/AiCompanionPage.js": {
+    "mtime": 1794776669.4536567,
+    "seen": 1794807422.3701642,
+    "ast_hash": "a1feb15906f05afdb61da1c059b3f0f1",
+    "semantic_hash": "a1feb15906f05afdb61da1c059b3f0f1"
+  },
+  "src/pages/HomePage.js": {
+    "mtime": 1794637318.1347723,
+    "seen": 1794807422.370165,
+    "ast_hash": "710e70600b3637d4da9f91c40f27c75e",
+    "semantic_hash": "710e70600b3637d4da9f91c40f27c75e"
+  },
+  "src/pages/MoodTrackerPage.js": {
+    "mtime": 1794776669.4546535,
+    "seen": 1794807422.3701658,
+    "ast_hash": "b9387460d04926b6b0c57e590f8bb245",
+    "semantic_hash": "b9387460d04926b6b0c57e590f8bb245"
+  },
+  "src/pages/MyTasksPage.js": {
+    "mtime": 1794651349.254239,
+    "seen": 1794807422.3701668,
+    "ast_hash": "508557c00f85b038513982e43662b77a",
+    "semantic_hash": "508557c00f85b038513982e43662b77a"
+  },
+  "src/pages/SettingsPage.js": {
+    "mtime": 1794776669.4546535,
+    "seen": 1794807422.3701675,
+    "ast_hash": "2db7badc61702151edc537763cb465da",
+    "semantic_hash": "2db7badc61702151edc537763cb465da"
+  },
+  "src/utils/EventEmitter.js": {
+    "mtime": 1794637099.9896176,
+    "seen": 1794807422.3701682,
+    "ast_hash": "43b061ae7e5f5cab012c846aed142694",
+    "semantic_hash": "43b061ae7e5f5cab012c846aed142694"
+  },
+  "src/utils/StateManager.js": {
+    "mtime": 1794776669.4546535,
+    "seen": 1794807422.3701692,
+    "ast_hash": "bf7cc77400ca176601a7331883ef8270",
+    "semantic_hash": "bf7cc77400ca176601a7331883ef8270"
+  },
+  "src/utils/ThemeManager.js": {
+    "mtime": 1794649043.5720005,
+    "seen": 1794807422.37017,
+    "ast_hash": "d6c5790251a031f4458bf452a43d481e",
+    "semantic_hash": "d6c5790251a031f4458bf452a43d481e"
+  },
+  "src/utils/moodConfig.js": {
+    "mtime": 1794764090.0302486,
+    "seen": 1794807422.370171,
+    "ast_hash": "8a18c8754c77659d5b35524d34ee11e4",
+    "semantic_hash": "8a18c8754c77659d5b35524d34ee11e4"
+  },
+  "src/utils/personalities-shared.js": {
+    "mtime": 1794764053.6876993,
+    "seen": 1794807422.3701723,
+    "ast_hash": "c09ea830e7404b1664ecdf2c56ae7e8c",
+    "semantic_hash": "c09ea830e7404b1664ecdf2c56ae7e8c"
+  },
+  "src/utils/personalities.js": {
+    "mtime": 1794764080.8419843,
+    "seen": 1794807422.370173,
+    "ast_hash": "40986f43ee5cf309984665362a6f7a29",
+    "semantic_hash": "40986f43ee5cf309984665362a6f7a29"
+  }
+}
