@@ -6,6 +6,16 @@ import { createServer } from 'http';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 
+// Capability system (imported dynamically to avoid circular deps)
+let CapabilityRegistry = null;
+async function getCapabilityRegistry() {
+  if (!CapabilityRegistry) {
+    const module = await import('./src/utils/CapabilityRegistry.js');
+    CapabilityRegistry = module.CapabilityRegistry;
+  }
+  return CapabilityRegistry;
+}
+
 // Load environment variables
 dotenv.config();
 console.log(
@@ -110,15 +120,25 @@ function buildGeminiMessages(reqBody) {
   const systemPrompt = PERSONALITY_SYSTEM_PROMPTS[personality] || PERSONALITY_SYSTEM_PROMPTS['calm-listener'];
   const moodGuide = mood && mood.expression ? MOOD_CONTEXT_GUIDES[mood.expression] : '';
 
-  // Build context about mood source (important for transparency)
+  // Build enhanced context about mood source
   let moodContext = '';
   if (mood) {
     const confidence = mood.confidence ? ` (${Math.round(mood.confidence * 100)}% confidence)` : '';
     const source = mood.source ? ` [source: ${mood.source}]` : '';
     const confirmed = mood.confirmedMood ? ` User-confirmed mood: ${mood.confirmedMood}.` : '';
 
-    moodContext = `\n\nCurrent mood context: The user's facial expression suggests "${mood.expression}"${confidence}${source}.${confirmed}
-Important: Facial expressions are uncertain estimates only. Never claim to know the user's true emotional state. The user's explicitly stated or manually confirmed mood takes priority over any camera estimate.`;
+    // AI summary from multimodal fusion
+    const aiSummary = mood.aiSummary ? `\n${mood.aiSummary}` : '';
+
+    // Facial details
+    const facial = mood.facial ? `\nFacial: detected=${mood.facial.detected}, expression=${mood.facial.expression}, confidence=${Math.round((mood.facial.confidence || 0) * 100)}%` : '';
+    const personalized = (mood.facial?.personalized) ? `, personalized=${mood.facial.personalized.expression} (${Math.round((mood.facial.personalized.confidence || 0) * 100)}%)` : '';
+
+    // Speech cues
+    const speech = mood.speech?.cues ? `\nSpeech cues: ${mood.speech.cues.emotions.join(', ')} (${mood.speech.cues.intensity} intensity)${mood.speech.cues.explicitMood ? `, explicit: ${mood.speech.cues.explicitMood}` : ''}` : '';
+
+    moodContext = `\n\nCurrent mood context: The user's emotional state suggests "${mood.expression}"${confidence}${source}.${confirmed}${aiSummary}${facial}${personalized}${speech}
+Important: All emotional cues are uncertain estimates only. Never claim to know the user's true emotional state. The user's explicitly stated or manually confirmed mood takes priority over any inferred signals.`;
   }
 
   const fullSystemPrompt = `${systemPrompt}${moodGuide}${moodContext}
@@ -127,8 +147,8 @@ Guidelines:
 - Keep responses concise but warm (typically 2-4 sentences)
 - Adapt your tone to the personality and mood context
 - Never diagnose mental health conditions
-- Don't claim facial expressions reveal true emotions
-- If the user explicitly states their mood, that overrides any camera estimate
+- Don't claim facial expressions or voice cues reveal true emotions
+- If the user explicitly states their mood, that overrides any inferred signals
 - Ask follow-up questions when appropriate
 - Avoid repetitive responses`;
 
@@ -153,7 +173,7 @@ Guidelines:
 
 // Generate AI response
 
-async function generateAIResponse(messages) {
+async function generateAIResponse(messages, capabilities = '') {
   if (!gemini) {
     throw new Error('Gemini not configured');
   }
@@ -171,19 +191,37 @@ async function generateAIResponse(messages) {
       parts: [{ text: msg.content }]
     }));
 
+  // Build system prompt with capabilities
+  let systemPrompt = systemMessage?.content || '';
+  if (capabilities) {
+    systemPrompt += `\n\nAvailable capabilities (tools you can call):\n${capabilities}\n\nTo use a capability, respond with a JSON object:\n{"tool": "capability_name", "input": {...}, "reasoning": "why you're calling this"}\nOnly call one capability at a time. Wait for the result before continuing.`;
+  }
+
   // Send request to Gemini
   const result = await gemini.models.generateContent({
     model: 'gemini-3.5-flash',
     contents: conversation,
     config: {
-      systemInstruction: systemMessage?.content || '',
+      systemInstruction: systemPrompt,
       temperature: 0.8,
       maxOutputTokens: 800
     }
   });
 
-  return result.text?.trim() ||
+  const responseText = result.text?.trim() ||
     "I'm not sure how to respond. Could you try again?";
+
+  // Check if response contains a tool call
+  try {
+    const parsed = JSON.parse(responseText);
+    if (parsed.tool && parsed.input) {
+      return { toolCall: parsed };
+    }
+  } catch (e) {
+    // Not a tool call, return as regular response
+  }
+
+  return responseText;
 }
 
 
@@ -241,7 +279,7 @@ app.post('/api/chat', express.json({ limit: '10kb' }), async (req, res) => {
       });
     }
 
-    const { personality, mood } = req.body;
+    const { personality, mood, capabilities } = req.body;
 
     // Build messages for AI
     const messages = buildGeminiMessages(req.body);
@@ -264,11 +302,62 @@ app.post('/api/chat', express.json({ limit: '10kb' }), async (req, res) => {
       }
     } else {
       try {
-        response = await generateAIResponse(messages);
+        // Handle tool calls in a loop
+        let currentMessages = messages;
+        let iterations = 0;
+        const maxIterations = 3;
+
+        while (iterations < maxIterations) {
+          const aiResult = await generateAIResponse(currentMessages, capabilities);
+
+          if (typeof aiResult === 'object' && aiResult.toolCall) {
+            // Execute the capability
+            const { tool, input, reasoning } = aiResult.toolCall;
+            console.log(`[AI Tool Call] ${tool}`, input, reasoning);
+
+            const CapabilityRegistryClass = await getCapabilityRegistry();
+            if (!capabilityRegistry) {
+              const mockStateManager = {
+                get: (path) => {
+                  if (path === 'settings.capabilityPermissions') return ['tasks.read', 'tasks.write', 'mood.read', 'mood.write', 'settings.read', 'settings.write', 'camera', 'navigation'];
+                  return null;
+                },
+                set: () => {},
+                on: () => () => {},
+                emit: () => {},
+                addTask: (task) => `task_${Date.now()}`,
+                getTasks: () => [],
+                updateTask: () => {},
+                deleteTask: () => {},
+                getMoodHistory: () => [],
+                setUserConfirmedMood: () => {},
+                getSettings: () => ({}),
+                updateSettings: () => {},
+                navigateTo: () => {}
+              };
+              capabilityRegistry = new CapabilityRegistryClass(mockStateManager);
+            }
+
+            const toolResult = await capabilityRegistry.execute(tool, input, true);
+
+            // Add tool result to conversation
+            currentMessages.push({ role: 'model', content: JSON.stringify(aiResult.toolCall) });
+            currentMessages.push({ role: 'user', content: `Tool result: ${JSON.stringify(toolResult)}` });
+
+            iterations++;
+            continue;
+          } else {
+            response = aiResult;
+            break;
+          }
+        }
+
+        if (iterations >= maxIterations) {
+          response = "I'm having trouble completing that action. Let me try a different approach.";
+        }
       } catch (aiError) {
         console.error('Gemini API error:', aiError.status || 'unknown', aiError.message);
 
-        // Check if it's a specific error we can handle
         const errorMessage = aiError.message || 'Unknown error';
         let statusCode = 502;
         let errorType = 'api_error';
@@ -287,12 +376,10 @@ app.post('/api/chat', express.json({ limit: '10kb' }), async (req, res) => {
           errorType = 'network_error';
         }
 
-        // Check if DEMO mode is explicitly enabled for fallback
         const demoMode = process.env.DEMO_MODE === 'true';
         if (demoMode) {
           console.log('DEMO MODE: Falling back to simulated response due to error:', errorMessage);
           response = generateSimulatedResponse(personality, mood);
-          // Still inform the client this is demo mode
           return res.json({
             response,
             warning: 'Using DEMO mode fallback due to API error: ' + errorType
@@ -319,15 +406,86 @@ app.post('/api/chat', express.json({ limit: '10kb' }), async (req, res) => {
   }
 });
 
+// Capability registry instance (lazy initialized)
+let capabilityRegistry = null;
+
+// API endpoint for capability execution
+app.post('/api/capability', express.json({ limit: '10kb' }), async (req, res) => {
+  const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+
+  // Rate limiting
+  if (!checkRateLimit(clientIp)) {
+    return res.status(429).json({
+      error: 'Rate limit exceeded. Please wait a moment before sending another request.',
+      retryAfter: 60
+    });
+  }
+
+  try {
+    const { capability, input, confirmed } = req.body;
+
+    if (!capability || typeof capability !== 'string') {
+      return res.status(400).json({ error: 'Capability name is required' });
+    }
+
+    // Initialize capability registry with state manager
+    // We need to create a minimal state manager for the server
+    // For now, we'll use a simplified approach
+    const CapabilityRegistryClass = await getCapabilityRegistry();
+
+    if (!capabilityRegistry) {
+      // Create a mock state manager for server-side capabilities
+      const mockStateManager = {
+        get: (path) => {
+          if (path === 'settings.capabilityPermissions') return ['tasks.read', 'tasks.write', 'mood.read', 'mood.write', 'settings.read', 'settings.write', 'camera', 'navigation'];
+          return null;
+        },
+        set: () => {},
+        on: () => () => {},
+        emit: () => {},
+        addTask: (task) => `task_${Date.now()}`,
+        getTasks: () => [],
+        updateTask: () => {},
+        deleteTask: () => {},
+        getMoodHistory: () => [],
+        setUserConfirmedMood: () => {},
+        getSettings: () => ({}),
+        updateSettings: () => {},
+        navigateTo: () => {}
+      };
+      capabilityRegistry = new CapabilityRegistryClass(mockStateManager);
+    }
+
+    // Add server-side implementations for capabilities that need backend
+    // For navigation, camera control - these are frontend-only, return success
+    const frontendOnlyCapabilities = ['navigate_page', 'start_camera', 'stop_camera'];
+    if (frontendOnlyCapabilities.includes(capability)) {
+      return res.json({ success: true, result: { success: true, message: 'Execute on frontend' } });
+    }
+
+    const result = await capabilityRegistry.execute(capability, input || {}, confirmed === true);
+    res.json(result);
+  } catch (error) {
+    console.error('Capability execution error:', error);
+    res.status(500).json({ error: 'Failed to execute capability', message: error.message });
+  }
+});
+
+// API endpoint to list available capabilities
+app.get('/api/capabilities', (req, res) => {
+  if (!capabilityRegistry) {
+    // Return static list
+    return res.json({ capabilities: [] });
+  }
+  res.json({ capabilities: capabilityRegistry.getSchemas() });
+});
+
 // Health check
 app.get('/api/health', async (req, res) => {
   let geminiStatus = 'not_configured';
 
   if (gemini) {
-    // Try a simple connectivity test
     try {
-      // Quick test - just check if we can make a minimal request
-      // We won't actually send a request to avoid quota usage
       geminiStatus = 'configured';
     } catch (e) {
       geminiStatus = 'error';

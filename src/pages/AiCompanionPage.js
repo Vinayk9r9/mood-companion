@@ -1,6 +1,5 @@
 import { ChatInterface } from '../components/ai/ChatInterface.js';
 import { PersonalitySelector } from '../components/ai/PersonalitySelector.js';
-import { VoiceChat } from '../components/ai/VoiceChat.js';
 import { CameraToggle } from '../components/camera/CameraToggle.js';
 import { MoodContextIndicator } from '../components/mood/MoodContextIndicator.js';
 import { PERSONALITIES } from '../utils/personalities.js';
@@ -176,9 +175,6 @@ export class AiCompanionPage {
                 `).join('')}
               </div>
             </div>
-
-            <!-- Voice Chat Panel -->
-            <div id="voice-chat-container"></div>
           </div>
         </div>
       </div>
@@ -245,13 +241,6 @@ export class AiCompanionPage {
     if (moodContainer) {
       this.components.moodContextIndicator = new MoodContextIndicator(this.stateManager, this.themeManager);
       this.components.moodContextIndicator.mount(moodContainer);
-    }
-
-    // Voice Chat
-    const voiceContainer = this.container.querySelector('#voice-chat-container');
-    if (voiceContainer) {
-      this.components.voiceChat = new VoiceChat(this.stateManager, this.themeManager);
-      this.components.voiceChat.mount(voiceContainer);
     }
 
     // Setup suggestion buttons

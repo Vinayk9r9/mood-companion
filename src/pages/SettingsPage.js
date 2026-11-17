@@ -132,6 +132,41 @@ export class SettingsPage {
               <button class="toggle-switch ${settings.ttsEnabled ? 'active' : ''}" data-setting="ttsEnabled" role="switch" aria-checked="${settings.ttsEnabled}" aria-label="Voice Output"></button>
             </div>
 
+            <!-- Voice Selection -->
+            <div>
+              <label class="block text-sm font-medium text-primary-700 dark:text-lavender-200 mb-3">Voice Selection</label>
+              <select id="voice-select" class="input" aria-label="Select TTS voice">
+                <option value="">Loading voices...</option>
+              </select>
+              <p class="text-xs text-muted mt-1">Select the voice for AI responses. Voices vary by browser/OS.</p>
+            </div>
+
+            <!-- Speech Rate -->
+            <div>
+              <label class="block text-sm font-medium text-primary-700 dark:text-lavender-200 mb-3 flex items-center justify-between">
+                <span>Speech Rate</span>
+                <span id="rate-value" class="font-mono text-primary-600 dark:text-primary-400">${(settings.ttsRate || 1.0).toFixed(1)}x</span>
+              </label>
+              <input type="range" id="rate-slider" min="0.5" max="2" step="0.1" value="${settings.ttsRate || 1.0}" class="w-full h-2 bg-lavender-200 dark:bg-primary-800 rounded-lg appearance-none accent-primary-500" aria-label="Speech rate">
+              <p class="text-xs text-muted mt-1">Adjust how fast the AI speaks (0.5x - 2x)</p>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-primary-900 dark:text-primary-100">Hands-Free Mode</p>
+                <p class="text-sm text-muted">Continuously listen and auto-respond without clicking mic</p>
+              </div>
+              <button class="toggle-switch ${settings.handsFreeEnabled ? 'active' : ''}" data-setting="handsFreeEnabled" role="switch" aria-checked="${settings.handsFreeEnabled}" aria-label="Hands-Free Mode"></button>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-primary-900 dark:text-primary-100">Wake Word Detection</p>
+                <p class="text-sm text-muted">Activate listening with a wake word (experimental)</p>
+              </div>
+              <button class="toggle-switch ${settings.wakeWordEnabled ? 'active' : ''}" data-setting="wakeWordEnabled" role="switch" aria-checked="${settings.wakeWordEnabled}" aria-label="Wake Word Detection"></button>
+            </div>
+
             <div class="flex items-center justify-between">
               <div>
                 <p class="font-medium text-primary-900 dark:text-primary-100">Live Emotion Adaptation</p>
@@ -142,7 +177,63 @@ export class SettingsPage {
 
             <div class="p-4 rounded-xl glass border border-lavender-200/50 dark:border-primary-800/50 bg-amber-50 dark:bg-amber-900/20">
               <p class="text-sm text-amber-800 dark:text-amber-200">
-                <strong>Note:</strong> Voice input requires microphone permission and a supported browser (Chrome, Edge, Safari). Voice output uses the browser's built-in speech synthesis. Live emotion adaptation requires the camera to be active with expression detection enabled.
+                <strong>Note:</strong> Voice input requires microphone permission and a supported browser (Chrome, Edge, Safari). Voice output uses the browser's built-in speech synthesis. Live emotion adaptation requires the camera to be active with expression detection enabled. Hands-free mode continuously listens; wake word detection is experimental and runs locally.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Privacy Controls -->
+        <section class="card p-6 space-y-6" aria-labelledby="privacy-heading">
+          <h2 id="privacy-heading" class="font-display text-xl font-semibold text-primary-900 dark:text-primary-100 flex items-center gap-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            Privacy Controls
+          </h2>
+
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-primary-900 dark:text-primary-100">Camera Access</p>
+                <p class="text-sm text-muted">Allow camera for facial expression detection</p>
+              </div>
+              <button class="toggle-switch ${settings.cameraEnabled ? 'active' : ''}" data-setting="cameraEnabled" role="switch" aria-checked="${settings.cameraEnabled}" aria-label="Camera Access"></button>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-primary-900 dark:text-primary-100">Microphone Access</p>
+                <p class="text-sm text-muted">Allow microphone for voice chat</p>
+              </div>
+              <button class="toggle-switch ${settings.sttEnabled ? 'active' : ''}" data-setting="sttEnabled" role="switch" aria-checked="${settings.sttEnabled}" aria-label="Microphone Access"></button>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-primary-900 dark:text-primary-100">Emotion Detection</p>
+                <p class="text-sm text-muted">Analyze facial expressions and voice for mood context</p>
+              </div>
+              <button class="toggle-switch ${settings.expressionDetectionEnabled ? 'active' : ''}" data-setting="expressionDetectionEnabled" role="switch" aria-checked="${settings.expressionDetectionEnabled}" aria-label="Emotion Detection"></button>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-primary-900 dark:text-primary-100">Voice Responses</p>
+                <p class="text-sm text-muted">AI speaks responses aloud</p>
+              </div>
+              <button class="toggle-switch ${settings.ttsEnabled ? 'active' : ''}" data-setting="ttsEnabled" role="switch" aria-checked="${settings.ttsEnabled}" aria-label="Voice Responses"></button>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-primary-900 dark:text-primary-100">Auto-Resume Listening</p>
+                <p class="text-sm text-muted">Automatically resume listening after AI speaks (hands-free)</p>
+              </div>
+              <button class="toggle-switch ${settings.handsFreeEnabled ? 'active' : ''}" data-setting="handsFreeEnabled" role="switch" aria-checked="${settings.handsFreeEnabled}" aria-label="Auto-Resume Listening"></button>
+            </div>
+
+            <div class="p-4 rounded-xl glass border border-lavender-200/50 dark:border-primary-800/50 bg-primary-50 dark:bg-primary-900/20">
+              <p class="text-sm text-primary-800 dark:text-primary-200">
+                <strong>Privacy Commitment:</strong> All camera and microphone processing happens locally in your browser. No video, images, or audio recordings are ever uploaded or stored. Face mesh data and voice analysis are processed in real-time and discarded immediately. You can disable any feature at any time.
               </p>
             </div>
           </div>
@@ -335,6 +426,25 @@ export class SettingsPage {
         this.stateManager.updateSettings({ confirmationFrequency: btn.dataset.frequency });
       });
     });
+
+    // Voice selection
+    const voiceSelect = this.container.querySelector('#voice-select');
+    if (voiceSelect) {
+      voiceSelect.addEventListener('change', () => {
+        this.stateManager.updateSettings({ ttsVoice: voiceSelect.value });
+      });
+    }
+
+    // Speech rate slider
+    const rateSlider = this.container.querySelector('#rate-slider');
+    const rateValue = this.container.querySelector('#rate-value');
+    if (rateSlider && rateValue) {
+      rateSlider.addEventListener('input', () => {
+        const value = parseFloat(rateSlider.value);
+        rateValue.textContent = value.toFixed(1) + 'x';
+        this.stateManager.updateSettings({ ttsRate: value });
+      });
+    }
 
     // Export data
     this.container.querySelector('#export-data')?.addEventListener('click', () => {

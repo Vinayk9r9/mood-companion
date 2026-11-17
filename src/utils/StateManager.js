@@ -90,6 +90,10 @@ export class StateManager extends EventEmitter {
         voiceEnabled: false,
         ttsEnabled: false,
         sttEnabled: false,
+        handsFreeEnabled: false,
+        wakeWordEnabled: false,
+        ttsRate: 1.0,
+        ttsVoice: null,
         dataPersistence: 'local', // 'local', 'cloud', 'none'
         animationsEnabled: true,
         reducedMotion: false,
